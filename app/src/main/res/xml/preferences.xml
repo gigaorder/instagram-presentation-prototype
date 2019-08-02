@@ -16,7 +16,7 @@
             android:defaultValue="0"
             android:inputType="number"
             android:key="@string/pref_post_no"
-            android:summary="Enter 0 to display all available posts"
+            android:summary="Use 0 for displaying all available posts"
             android:title="Number of posts to display" />
     </PreferenceCategory>
 

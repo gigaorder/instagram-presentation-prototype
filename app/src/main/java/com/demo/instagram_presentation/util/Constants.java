@@ -11,4 +11,10 @@ public class Constants {
     public final static int IMAGE_PRESENTATION_INTERVAL = 5000;
     public final static int DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY = 5;
     public final static double DEFAULT_POST_OVERLAY_OPACITY = 0.5;
+
+    //Web server configs
+    public final static int WEB_SERVER_PORT = 8080;
+
+    //Broadcasts constants
+    public final static String PREFERENCE_CHANGED_ACTION = "PREFERENCE_CHANGED";
 }

@@ -52,7 +52,7 @@ public class ImagePresentationFragment extends Fragment {
     TextView txtNumberOfLikes;
     @BindView(R.id.fragment_present_txtNumberOfComments)
     TextView txtNumberOfComments;
-    @BindView(R.id.txtPostDescription)
+    @BindView(R.id.fragment_present_txtPostDescription)
     TextView txtPostDescription;
     @BindView(R.id.fragment_present_layout_user_section)
     View userInfoSection;

@@ -3,7 +3,7 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="source_url_not_set">Instagram source URL is not set, please click to go to settings to setup the URL</string>
+    <string name="source_url_not_set">Instagram source URL is not set, please double click to go to settings to setup the URL or use the remote config server</string>
     <string name="invalid_source_url">Invalid Instagram user URL, please specify a valid URL</string>
     <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram</string>
     <string name="progress_getting_user_info">0/2: Getting user info</string>

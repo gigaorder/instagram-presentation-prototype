@@ -112,7 +112,7 @@
         app:layout_constraintTop_toBottomOf="@id/fragment_present_txtNumberOfLikes" />
 
     <TextView
-        android:id="@+id/txtPostDescription"
+        android:id="@+id/fragment_present_txtPostDescription"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
