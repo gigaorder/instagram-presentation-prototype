@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Instagram configurations">
+        <EditTextPreference
+            android:key="@string/pref_instagram_source"
+            android:summary="Must be a valid Instagram URL"
+            android:title="Instagram source URL" />
+        <EditTextPreference
+            android:key="@string/pref_excluded_hashtags"
+            android:summary="Multiple hashtags are separated by commas"
+            android:title="Exclude by hashtags" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Presentation configurations">
+        <EditTextPreference
+            android:defaultValue="0"
+            android:inputType="number"
+            android:key="@string/pref_post_no"
+            android:summary="Enter 0 to display all available posts"
+            android:title="Number of posts to display" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Visibility configurations">
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_is_profile_pic_displayed"
+            android:title="User's profile picture" />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_is_username_displayed"
+            android:title="Username" />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_is_post_likes_displayed"
+            android:title="Post likes" />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_is_post_comments_displayed"
+            android:title="Post comments" />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_is_post_description_displayed"
+            android:title="Post Description" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Exit">
+        <Preference
+            android:key="@string/pref_back_button"
+            android:title="Go back to main screen" />
+    </PreferenceCategory>
+</PreferenceScreen>

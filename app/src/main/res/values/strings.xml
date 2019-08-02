@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Instagram Presentation Demo</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="source_url_not_set">Instagram source URL is not set, please click to go to settings to setup the URL</string>
+    <string name="invalid_source_url">Invalid Instagram user URL, please specify a valid URL</string>
+    <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram</string>
+    <string name="progress_getting_user_info">0/2: Getting user info</string>
+    <string name="progress_getting_feed_data">1/2: Getting data from user\'s feed</string>
+    <string name="progress_done">2/2: All done!</string>
+    <string name="pref_instagram_source">instagram_source</string>
+    <string name="pref_excluded_hashtags">excluded_hashtags</string>
+    <string name="pref_post_no">post_no</string>
+    <string name="pref_is_profile_pic_displayed">is_profile_pic_displayed</string>
+    <string name="pref_is_username_displayed">is_username_displayed</string>
+    <string name="pref_is_post_likes_displayed">is_post_likes_displayed</string>
+    <string name="pref_is_post_comments_displayed">is_post_comments_displayed</string>
+    <string name="pref_is_post_description_displayed">is_post_description_displayed</string>
+    <string name="pref_back_button">back_button</string>
+</resources>
