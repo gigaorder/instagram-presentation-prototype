@@ -3,49 +3,58 @@
     <PreferenceCategory android:title="Instagram configurations">
         <EditTextPreference
             android:key="@string/pref_instagram_source"
-            android:summary="Must be a valid Instagram URL"
-            android:title="Instagram source URL" />
+            android:summary="@string/pref_instagram_source_summary"
+            android:title="@string/pref_instagram_source_title" />
         <EditTextPreference
             android:key="@string/pref_excluded_hashtags"
-            android:summary="Multiple hashtags are separated by commas"
-            android:title="Exclude by hashtags" />
+            android:summary="@string/pref_excluded_hashtags_summary"
+            android:title="@string/pref_excluded_hashtags_title" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Presentation configurations">
+    <PreferenceCategory android:title="@string/pref_category_presentation_title">
         <EditTextPreference
             android:defaultValue="0"
             android:inputType="number"
             android:key="@string/pref_post_no"
-            android:summary="Use 0 for displaying all available posts"
-            android:title="Number of posts to display" />
+            android:summary="@string/pref_post_no_summary"
+            android:title="@string/pref_post_no_title" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Visibility configurations">
+    <PreferenceCategory android:title="@string/pref_category_visibility_title">
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/pref_is_profile_pic_displayed"
-            android:title="User's profile picture" />
+            android:title="@string/pref_is_profile_pic_displayed_title" />
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/pref_is_username_displayed"
-            android:title="Username" />
+            android:title="@string/pref_is_username_displayed_title" />
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/pref_is_post_likes_displayed"
-            android:title="Post likes" />
+            android:title="@string/pref_is_post_likes_displayed_title" />
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/pref_is_post_comments_displayed"
-            android:title="Post comments" />
+            android:title="@string/pref_is_post_comments_displayed_title" />
         <SwitchPreference
             android:defaultValue="true"
             android:key="@string/pref_is_post_description_displayed"
-            android:title="Post Description" />
+            android:title="@string/pref_is_post_description_displayed_title" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Exit">
+    <PreferenceCategory android:title="@string/pref_category_size_title">
+        <EditTextPreference
+            android:key="@string/pref_img_main_width"
+            android:title="@string/pref_img_main_width_title" />
+        <EditTextPreference
+            android:key="@string/pref_img_main_height"
+            android:title="@string/pref_img_main_height_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/exit">
         <Preference
             android:key="@string/pref_back_button"
-            android:title="Go back to main screen" />
+            android:title="@string/go_back_to_main_screen" />
     </PreferenceCategory>
 </PreferenceScreen>

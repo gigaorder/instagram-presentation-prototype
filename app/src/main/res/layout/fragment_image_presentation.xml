@@ -19,6 +19,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <Button
+        android:id="@+id/fragment_present_btnExit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Exit"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
         android:id="@+id/fragment_present_txtProgress"
         android:layout_width="wrap_content"
@@ -45,14 +53,14 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/fragment_present_layout_user_section"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/fragment_present_imgProfile"
-            android:layout_width="60dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
@@ -67,9 +75,11 @@
             android:gravity="center"
             android:text="Username"
             android:textColor="#000000"
-            android:textSize="16sp"
+            android:textSize="40sp"
             android:textStyle="bold"
-            app:layout_constraintStart_toEndOf="@id/fragment_present_imgProfile" />
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/fragment_present_imgProfile"
+            app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
@@ -91,7 +101,7 @@
         android:paddingBottom="4dp"
         android:text="1,000,000 likes"
         android:textColor="#000000"
-        android:textSize="14sp"
+        android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fragment_present_imgMain" />
@@ -106,7 +116,7 @@
         android:paddingBottom="4dp"
         android:text="1,234 comments"
         android:textColor="#000000"
-        android:textSize="14sp"
+        android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fragment_present_txtNumberOfLikes" />
@@ -120,7 +130,7 @@
         android:padding="8dp"
         android:text="Description"
         android:textColor="#000000"
-        android:textSize="14sp"
+        android:textSize="30sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fragment_present_txtNumberOfComments" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,6 +3,7 @@ package com.demo.instagram_presentation.fragment;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,6 +61,8 @@ public class ImagePresentationFragment extends Fragment {
     ContentLoadingProgressBar progressBar;
     @BindView(R.id.fragment_present_txtProgress)
     TextView txtProgress;
+    @BindView(R.id.fragment_present_btnExit)
+    TextView btnExit;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -89,6 +92,24 @@ public class ImagePresentationFragment extends Fragment {
     String isUsernameDisplayPrefKey;
     @BindString(R.string.pref_excluded_hashtags)
     String excludedHashtagsPrefKey;
+    @BindString(R.string.pref_img_main_height)
+    String imgMainHeightPrefKey;
+    @BindString(R.string.pref_img_main_width)
+    String imgMainWidthPrefKey;
+    @BindString(R.string.pref_profile_pic_width)
+    String profilePicWidthPrefKey;
+    @BindString(R.string.pref_profile_pic_height)
+    String profilePicHeightPrefKey;
+    @BindString(R.string.pref_username_text_size)
+    String usernameTextSizePrefKey;
+    @BindString(R.string.pref_like_text_size)
+    String likeTextSizePrefKey;
+    @BindString(R.string.pref_comment_text_size)
+    String commentTextSizePrefKey;
+    @BindString(R.string.pref_description_text_size)
+    String descriptionTextSizePrefKey;
+    @BindString(R.string.pref_present_interval)
+    String presentIntervalPrefKey;
 
     private RequestQueue requestQueue;
     private Runnable imagePresentationLoader;
@@ -101,6 +122,15 @@ public class ImagePresentationFragment extends Fragment {
     private List<String> excludedHashtags;
     private String instagramSourceUrl;
     private int numberOfPostsToDisplay;
+    private int profilePicWidth;
+    private int profilePicHeight;
+    private int usernameTextSize;
+    private int imgMainWidth;
+    private int imgMainHeight;
+    private int likeTextSize;
+    private int commentTextSize;
+    private int descriptionTextSize;
+    private int presentInterval;
     private boolean isLikesDisplayed;
     private boolean isCommentsDisplayed;
     private boolean isDescriptionDisplayed;
@@ -129,6 +159,7 @@ public class ImagePresentationFragment extends Fragment {
         fragmentRootView.setOnClickListener(rootContainerClickListener);
 
         getPreferences();
+        initComponentsSize();
 
         // Hide components, show them after the images are loaded
         hideComponents();
@@ -155,6 +186,8 @@ public class ImagePresentationFragment extends Fragment {
                     userInfoResponseErrorListener
             ));
         }
+
+        btnExit.setOnClickListener(view -> getActivity().finish());
 
         return fragmentRootView;
     }
@@ -246,10 +279,15 @@ public class ImagePresentationFragment extends Fragment {
     public void onPause() {
         super.onPause();
 
+        requestQueue.cancelAll(request -> true);
         handler.removeCallbacks(imagePresentationLoader);
     }
 
     private void startImagePresentation(final List<InstagramPost> posts) {
+        if (imagePresentationLoader != null) {
+            handler.removeCallbacks(imagePresentationLoader);
+        }
+
         imagePresentationLoader = new Runnable() {
             int index = 0;
 
@@ -280,7 +318,7 @@ public class ImagePresentationFragment extends Fragment {
                 txtProgress.setVisibility(View.GONE);
                 progressBar.setProgress(0);
 
-                handler.postDelayed(this, Constants.IMAGE_PRESENTATION_INTERVAL);
+                handler.postDelayed(this, presentInterval);
             }
         };
 
@@ -366,19 +404,45 @@ public class ImagePresentationFragment extends Fragment {
     }
 
     private void getPreferences() {
-        // Get the preferences
+        // Data configs
         instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
-        numberOfPostsToDisplay = Integer.parseInt(sharedPreferences.getString(postNoPrefKey,
-                String.valueOf(Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY)));
+        numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
         isLikesDisplayed = sharedPreferences.getBoolean(isLikesDisplayedPrefKey, true);
         isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
         isDescriptionDisplayed = sharedPreferences.getBoolean(isPostDescriptionDisplayedPrefKey, true);
         isProfilePicDisplayed = sharedPreferences.getBoolean(isProfilePicDisplayedPrefKey, true);
         isUsernameDisplayed = sharedPreferences.getBoolean(isUsernameDisplayPrefKey, true);
 
+        // Size configs
+        profilePicWidth = getIntValueFromPref(profilePicWidthPrefKey, Constants.DEFAULT_PROFILE_PIC_WIDTH);
+        profilePicHeight = getIntValueFromPref(profilePicHeightPrefKey, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
+        usernameTextSize = getIntValueFromPref(usernameTextSizePrefKey, Constants.DEFAULT_USERNAME_TEXT_SIZE);
+        imgMainWidth = getIntValueFromPref(imgMainWidthPrefKey, 0); //Width is initialized as screen's width in MainActivity
+        imgMainHeight = getIntValueFromPref(imgMainHeightPrefKey, 0); //Height is initialized as 3/4 of screen's width in MainActivity
+        likeTextSize = getIntValueFromPref(likeTextSizePrefKey, Constants.DEFAULT_LIKE_TEXT_SIZE);
+        commentTextSize = getIntValueFromPref(commentTextSizePrefKey, Constants.DEFAULT_COMMENT_TEXT_SIZE);
+        descriptionTextSize = getIntValueFromPref(descriptionTextSizePrefKey, Constants.DEFAULT_DESCRIPTION_TEXT_SIZE);
+        presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL);
+
         String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, null);
         if (excludedHashtagsString != null) {
             excludedHashtags = Arrays.asList(excludedHashtagsString.split(","));
         }
+    }
+
+    private int getIntValueFromPref(String key, int defaultValue) {
+        return Integer.parseInt(sharedPreferences.getString(key,
+                String.valueOf(defaultValue)));
+    }
+
+    private void initComponentsSize() {
+        imgProfile.getLayoutParams().width = profilePicWidth;
+        imgProfile.getLayoutParams().height = profilePicHeight;
+        txtUsername.setTextSize(TypedValue.COMPLEX_UNIT_SP, usernameTextSize);
+        imgMain.getLayoutParams().height = imgMainHeight;
+        imgMain.getLayoutParams().width = imgMainWidth;
+        txtNumberOfLikes.setTextSize(TypedValue.COMPLEX_UNIT_SP, likeTextSize);
+        txtNumberOfComments.setTextSize(TypedValue.COMPLEX_UNIT_SP, commentTextSize);
+        txtPostDescription.setTextSize(TypedValue.COMPLEX_UNIT_SP, descriptionTextSize);
     }
 }
