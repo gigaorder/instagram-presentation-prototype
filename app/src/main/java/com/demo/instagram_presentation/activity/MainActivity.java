@@ -9,8 +9,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
@@ -23,9 +27,13 @@ import com.demo.instagram_presentation.fragment.ImagePresentationFragment;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.ScreenUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
+import com.google.gson.Gson;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import butterknife.BindString;
 import butterknife.BindView;
@@ -39,12 +47,26 @@ public class MainActivity extends AppCompatActivity {
     String imgMainWidthPrefKey;
     @BindString(R.string.pref_img_main_height)
     String imgMainHeightPrefKey;
+    @BindString(R.string.wifi_direct_no_info)
+    String wifiDirectNoInfoMsg;
+    @BindString(R.string.wifi_direct_cant_start)
+    String wifiDirectCantStartMsg;
+    @BindString(R.string.config_server_cant_start)
+    String configServerCantStartMsg;
+    @BindString(R.string.getting_p2p_info)
+    String gettingInfoMsg;
+    @BindString(R.string.pref_wifi_list)
+    String wifiListPrefKey;
+    @BindString(R.string.pref_is_wifi_connected)
+    String isWifiConnectedPrefKey;
 
     public final static int FRAGMENT_CONTAINER_ID = R.id.settings_container;
     private NanoHttpdWebServer webServer;
-    private BroadcastReceiver appPreferenceChangedReceiver;
-    private String serverStatus = "offline";
     private SharedPreferences sharedPreferences;
+    private WifiP2pManager wifiP2pManager;
+    private WifiP2pManager.Channel wifiP2pChannel;
+    private WifiManager wifiManager;
+    private Gson gson;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,50 +79,54 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        gson = new Gson();
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         setDefaultPrefValues();
 
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
 
-        webServer = new NanoHttpdWebServer(getApplicationContext(), Constants.WEB_SERVER_PORT);
-        try {
-            webServer.start();
-            serverStatus = "online";
-            setServerInfo();
-        } catch (IOException e) {
-            e.printStackTrace();
-            txtServerInfo.setText("Remote config server status: offline. This message will disappear after 60 seconds");
-        } finally {
-            // Make server info text disappear after a while
-            Handler handler = new Handler();
-            handler.postDelayed(() -> txtServerInfo.setVisibility(View.GONE), 60000);
-        }
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
-                .commit();
+        startConfigServer();
+
+        if (isWifiConnected()) {
+            setServerInfoOnWifi();
+
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
+                    .commit();
+        } else {
+            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
+            // Turn on wifi and start scanning
+            wifiManager.setWifiEnabled(true);
+            wifiManager.startScan();
+            registerReceiver(wifiScanReceiver,
+                    new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+            // Start Wi-fi Direct
+            // Config server info will be set after Wi-fi Direct is established (in GroupInfoListener)
+            wifiP2pManager = (WifiP2pManager) getSystemService(WIFI_P2P_SERVICE);
+            wifiP2pChannel = wifiP2pManager.initialize(getApplicationContext(), getMainLooper(), null);
+            wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
+
+            Handler handler = new Handler();
+            handler.postDelayed(() -> wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 2000);
+        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
 
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(Constants.PREFERENCE_CHANGED_ACTION);
+        IntentFilter ifPrefChanged = new IntentFilter();
+        ifPrefChanged.addAction(Constants.PREFERENCE_CHANGED_ACTION);
 
-        appPreferenceChangedReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
-                        .commit();
-            }
-        };
+        IntentFilter ifWifiConnected = new IntentFilter();
+        ifWifiConnected.addAction(Constants.WIFI_CONNECTED_ACTION);
 
-        registerReceiver(appPreferenceChangedReceiver, intentFilter);
+        registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
+        registerReceiver(wifiConnectedReceiver, ifWifiConnected);
     }
 
     @Override
@@ -108,24 +134,24 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
 
         unregisterReceiver(appPreferenceChangedReceiver);
+        unregisterReceiver(wifiConnectedReceiver);
     }
 
     //TODO: refactor code
-    private void setServerInfo() {
-        String serverInfo = "Remote config server status: " + serverStatus;
+    private void setServerInfoOnWifi() {
+        String serverInfo = "Remote config server status: online";
 
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
         WifiInfo info = wifiManager.getConnectionInfo();
         String ssid = info.getSSID();
-
-        serverInfo += ". Connected WiFi SSID: " + ssid;
 
         int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
         final String formatedIpAddress = String.format(Locale.ENGLISH, "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                 (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
 
-        serverInfo += ". Web server is listening on " + formatedIpAddress + ":" + Constants.WEB_SERVER_PORT;
-        serverInfo += ". This message will disappear after 60 seconds";
+        serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
+                "Connected WiFi SSID: %s\n" +
+                "Config server IP address: %s:%d\n" +
+                "This message will disappear after 60 seconds", ssid, formatedIpAddress, Constants.WEB_SERVER_PORT);
 
         txtServerInfo.setText(serverInfo);
     }
@@ -145,6 +171,122 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
         webServer.stop();
+        wifiP2pManager.removeGroup(wifiP2pChannel, null);
+
+        unregisterReceiver(wifiScanReceiver);
+    }
+
+    private boolean isWifiConnected() {
+        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo wifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        return wifi.isConnected();
+    }
+
+    private void startConfigServer() {
+        try {
+            webServer = new NanoHttpdWebServer(getApplicationContext(), Constants.WEB_SERVER_PORT);
+            webServer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+            txtServerInfo.setText(configServerCantStartMsg);
+        } finally {
+            // Make server info text disappear after a while
+            hideServerInfoTextAfter(60000);
+        }
+    }
+
+    private WifiP2pManager.GroupInfoListener wifiP2pInfoListener = groupInfo -> {
+        if (groupInfo != null) {
+            String p2pNetworkName = groupInfo.getNetworkName();
+            String passphrase = groupInfo.getPassphrase();
+            String serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
+                            "Wi-fi Direct SSID: \"%s\"\n" +
+                            "Passphrase: \"%s\"\n" +
+                            "Wi-fi config IP address: 192.168.49.1:%d\n" +
+                            "This message will disappear after 60 seconds",
+                    p2pNetworkName, passphrase, Constants.WEB_SERVER_PORT);
+
+            txtServerInfo.setText(serverInfo);
+        } else {
+            txtServerInfo.setText(wifiDirectNoInfoMsg);
+        }
+    };
+
+    private WifiP2pManager.ActionListener onWifiDirectStartedListener = new WifiP2pManager.ActionListener() {
+        @Override
+        public void onSuccess() {
+            txtServerInfo.setText(gettingInfoMsg);
+        }
+
+        @Override
+        public void onFailure(int reason) {
+            if (reason == WifiP2pManager.ERROR) {
+                txtServerInfo.setText(wifiDirectCantStartMsg);
+            } else {
+                // Wi-fi Direct may have already been turned on
+                txtServerInfo.setText(gettingInfoMsg);
+            }
+        }
+    };
+
+    private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
+                    .commit();
+        }
+    };
+
+    private BroadcastReceiver wifiConnectedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            txtServerInfo.setText("Wifi detected, app will restart after 10 seconds");
+            Handler handler = new Handler();
+
+            handler.postDelayed(() -> {
+                unregisterReceiver(wifiScanReceiver);
+                setServerInfoOnWifi();
+                wifiP2pManager.removeGroup(wifiP2pChannel, null);
+
+                txtServerInfo.setVisibility(View.VISIBLE);
+                hideServerInfoTextAfter(60000);
+
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
+                        .commit();
+            }, 10000);
+        }
+    };
+
+    private BroadcastReceiver wifiScanReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent intent) {
+            if (intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
+                List<ScanResult> wifiScanResults = wifiManager.getScanResults();
+                Set<String> wifiSsidSet = new HashSet<>();
+
+                for (ScanResult wifiScanResult : wifiScanResults) {
+                    wifiSsidSet.add(wifiScanResult.SSID);
+                }
+
+                sharedPreferences.edit().putString(wifiListPrefKey, gson.toJson(wifiSsidSet)).apply();
+            }
+        }
+    };
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+    }
+
+    private void hideServerInfoTextAfter(int timeInMs) {
+        Handler handler = new Handler();
+        handler.postDelayed(() -> txtServerInfo.setVisibility(View.GONE), timeInMs);
     }
 }

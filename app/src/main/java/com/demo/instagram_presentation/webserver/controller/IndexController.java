@@ -9,7 +9,7 @@ import fi.iki.elonen.NanoHTTPD;
 
 public class IndexController {
     private static final String INDEX_FILENAME = "index.html";
-    AssetManager assetManager;
+    private AssetManager assetManager;
     private ErrorController errorController;
 
     public IndexController(AssetManager assetManager, ErrorController errorController) {
@@ -17,7 +17,7 @@ public class IndexController {
         this.errorController = errorController;
     }
 
-    public NanoHTTPD.Response handleGet() {
+    public NanoHTTPD.Response handlePageRequest() {
         try {
             InputStream inputStream = assetManager.open(INDEX_FILENAME);
             return NanoHTTPD.newChunkedResponse(NanoHTTPD.Response.Status.OK, "text/html", inputStream);

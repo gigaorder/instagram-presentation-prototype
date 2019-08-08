@@ -47,4 +47,10 @@
     <string name="pref_comment_text_size">comment_text_size</string>
     <string name="pref_description_text_size">description_text_size</string>
     <string name="pref_present_interval">present_interval</string>
+    <string name="wifi_direct_no_info">Can\'t get Wi-fi Direct info</string>
+    <string name="wifi_direct_cant_start">Can\'t start Wi-fi Direct</string>
+    <string name="config_server_cant_start">Config server status: offline. This message will disappear after 60 seconds</string>
+    <string name="getting_p2p_info">Getting Wi-fi Direct info...</string>
+    <string name="pref_wifi_list">wifi_list</string>
+    <string name="pref_is_wifi_connected">is_wifi_connected</string>
 </resources>

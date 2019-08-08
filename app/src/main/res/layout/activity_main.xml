@@ -18,11 +18,13 @@
     <TextView
         android:id="@+id/main_activity_txtServerInfo"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
+        android:layout_height="wrap_content"
         android:background="#ffffff"
         android:gravity="center"
         android:textColor="#F44336"
-        android:text="Server info"
+        android:text="Server info       "
+        android:lineHeight="80sp"
+        android:textSize="50sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

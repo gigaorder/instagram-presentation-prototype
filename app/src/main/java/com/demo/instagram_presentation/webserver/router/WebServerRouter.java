@@ -5,7 +5,9 @@ import android.content.res.AssetManager;
 
 import com.demo.instagram_presentation.webserver.controller.ErrorController;
 import com.demo.instagram_presentation.webserver.controller.IndexController;
+import com.demo.instagram_presentation.webserver.controller.PasswordController;
 import com.demo.instagram_presentation.webserver.controller.PreferenceController;
+import com.demo.instagram_presentation.webserver.controller.WifiController;
 import com.demo.instagram_presentation.webserver.util.StaticFileHandler;
 
 import java.io.IOException;
@@ -15,12 +17,14 @@ import fi.iki.elonen.NanoHTTPD;
 
 public class WebServerRouter {
     //TODO: refactor code
-
     private IndexController indexController;
     private PreferenceController preferenceController;
+    private WifiController wifiController;
     private ErrorController errorController;
+    private PasswordController passwordController;
     private StaticFileHandler staticFileHandler;
     private AssetManager assetManager;
+    private String lastRequestedUri;
 
     public WebServerRouter(Context context) {
         assetManager = context.getResources().getAssets();
@@ -29,7 +33,9 @@ public class WebServerRouter {
         staticFileHandler = new StaticFileHandler(assetManager, errorController);
 
         indexController = new IndexController(assetManager, errorController);
-        preferenceController = new PreferenceController(errorController, context);
+        preferenceController = new PreferenceController(context);
+        wifiController = new WifiController(assetManager, errorController, context);
+        passwordController = new PasswordController(assetManager, errorController);
     }
 
     public NanoHTTPD.Response routeRequest(NanoHTTPD.IHTTPSession session) {
@@ -39,19 +45,48 @@ public class WebServerRouter {
         NanoHTTPD.Response response = null;
 
         switch (requestUri) {
+            // Page requests
             case "/":
                 if (NanoHTTPD.Method.GET.equals(requestMethod)) {
-                    response = indexController.handleGet();
+                    response = indexController.handlePageRequest();
+                    lastRequestedUri = requestUri;
                 }
-
                 break;
-            case "/preference":
+            case "/wifi":
                 if (NanoHTTPD.Method.GET.equals(requestMethod)) {
-                    response = preferenceController.handleGet();
-                } else if (NanoHTTPD.Method.POST.equals(requestMethod)) {
-                    response = preferenceController.handlePost(getRequestBodyDataAsJson(session));
+                    response = wifiController.handlePageRequest();
+                    lastRequestedUri = requestUri;
                 }
                 break;
+            case "/login":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = passwordController.handleLoginPageRequest();
+                }
+                break;
+            // API requests
+            case "/api/v1/preference":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = preferenceController.getPreferences();
+                } else if (NanoHTTPD.Method.POST.equals(requestMethod)) {
+                    response = preferenceController.savePreferences(getRequestBodyDataAsJson(session));
+                }
+                break;
+            case "/api/v1/wifi/connect":
+                if (NanoHTTPD.Method.POST.equals(requestMethod)) {
+                    response = wifiController.connectToWifi(getRequestBodyDataAsJson(session));
+                }
+                break;
+            case "/api/v1/is-authorized":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = passwordController.isUserAuthorized();
+                }
+                break;
+            case "/api/v1/login":
+                if (NanoHTTPD.Method.POST.equals(requestMethod)) {
+                    response = passwordController.login(getRequestBodyDataAsJson(session), lastRequestedUri);
+                }
+                break;
+            // Other cases and static files requests
             default:
                 if (NanoHTTPD.Method.GET.equals(requestMethod)) {
                     response = staticFileHandler.handleResourceFileRequest(requestUri);

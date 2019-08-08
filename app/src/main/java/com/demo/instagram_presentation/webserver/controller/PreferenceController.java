@@ -10,6 +10,7 @@ import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 import com.demo.instagram_presentation.webserver.model.AppPreference;
+import com.demo.instagram_presentation.webserver.util.RequestUtil;
 import com.google.gson.Gson;
 
 import fi.iki.elonen.NanoHTTPD;
@@ -17,7 +18,6 @@ import fi.iki.elonen.NanoHTTPD;
 public class PreferenceController {
     // TODO: refactor code + extract hard-coded pref keys
 
-    private ErrorController errorController;
     private SharedPreferences sharedPreferences;
     private Gson gson;
     private Context context;
@@ -41,16 +41,15 @@ public class PreferenceController {
     private String descriptionTextSizePrefKey;
     private String presentIntervalPrefKey;
 
-    public PreferenceController(ErrorController errorController, Context context) {
-        this.errorController = errorController;
+    public PreferenceController(Context context) {
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         gson = new Gson();
         this.context = context;
 
-        getPreferences();
+        getPreferenceKeys();
     }
 
-    public NanoHTTPD.Response handleGet() {
+    public NanoHTTPD.Response getPreferences() {
         // Data configs
         String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
         int numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
@@ -97,17 +96,13 @@ public class PreferenceController {
 
         NanoHTTPD.Response response = NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", jsonResponse);
         // Allow CORS
-        response.addHeader("Access-Control-Allow-Origin", "*");
-        response.addHeader("Access-Control-Max-Age", "3628800");
-        response.addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-        response.addHeader("Access-Control-Allow-Headers", "X-Requested-With");
-        response.addHeader("Access-Control-Allow-Headers", "Authorization");
+        RequestUtil.addCorsHeadersToResponse(response);
         response.setChunkedTransfer(true);
 
         return response;
     }
 
-    public NanoHTTPD.Response handlePost(String requestBodyData) {
+    public NanoHTTPD.Response savePreferences(String requestBodyData) {
         AppPreference appPreference = gson.fromJson(requestBodyData, AppPreference.class);
 
         SharedPreferences.Editor prefEditor = sharedPreferences.edit();
@@ -138,7 +133,7 @@ public class PreferenceController {
         return NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/plain", "Saved successfully");
     }
 
-    private void getPreferences() {
+    private void getPreferenceKeys() {
         // Data pref keys
         instagramSourcePrefKey = context.getResources().getString(R.string.pref_instagram_source);
         postNoPrefKey = context.getResources().getString(R.string.pref_post_no);

@@ -44,6 +44,7 @@
         android:background="#ffffff"
         android:gravity="center"
         android:padding="16dp"
+        android:textSize="40sp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
