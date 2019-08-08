@@ -38,7 +38,7 @@ public class PasswordController {
         Map<String, Boolean> returnedDataMap = new HashMap<>();
         returnedDataMap.put("isUserAuthorized", isAuthorized);
 
-        return NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(returnedDataMap));
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(returnedDataMap));
     }
 
     public NanoHTTPD.Response handleLoginPageRequest() {
@@ -67,9 +67,9 @@ public class PasswordController {
             Map<String, String> returnedDataMap = new HashMap<>();
             returnedDataMap.put("lastRequestedUri", lastRequestedUri);
 
-            response = NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(returnedDataMap));
+            response = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(returnedDataMap));
         } else {
-            response = NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "text/plain", "Wrong password");
+            response = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "text/plain", "Wrong password");
         }
 
         cookieHandler.unloadQueue(response);

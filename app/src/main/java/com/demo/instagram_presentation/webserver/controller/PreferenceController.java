@@ -94,7 +94,7 @@ public class PreferenceController {
 
         String jsonResponse = gson.toJson(appPreference);
 
-        NanoHTTPD.Response response = NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", jsonResponse);
+        NanoHTTPD.Response response = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", jsonResponse);
         // Allow CORS
         RequestUtil.addCorsHeadersToResponse(response);
         response.setChunkedTransfer(true);
@@ -130,7 +130,7 @@ public class PreferenceController {
 
         context.sendBroadcast(new Intent(Constants.PREFERENCE_CHANGED_ACTION));
 
-        return NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/plain", "Saved successfully");
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/plain", "Saved successfully");
     }
 
     private void getPreferenceKeys() {

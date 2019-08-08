@@ -56,7 +56,7 @@ public class WifiController {
         String wifiListPrefKey = context.getResources().getString(R.string.pref_wifi_list);
         String wifiList = sharedPreferences.getString(wifiListPrefKey, "");
 
-        NanoHTTPD.Response response = NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", wifiList);
+        NanoHTTPD.Response response = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", wifiList);
         RequestUtil.addCorsHeadersToResponse(response);
         response.setChunkedTransfer(true);
 
@@ -91,7 +91,7 @@ public class WifiController {
         dataMap.put("result", connectResult);
         String result = gson.toJson(dataMap);
 
-        NanoHTTPD.Response response = NanoHttpdWebServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", result);
+        NanoHTTPD.Response response = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", result);
         RequestUtil.addCorsHeadersToResponse(response);
         response.setChunkedTransfer(true);
 

@@ -21,12 +21,21 @@
         android:layout_height="wrap_content"
         android:background="#ffffff"
         android:gravity="center"
-        android:textColor="#F44336"
-        android:text="Server info       "
         android:lineHeight="80sp"
+        android:text="Server info"
+        android:textColor="#F44336"
         android:textSize="50sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/main_activity_imgWatermark"
+        android:layout_width="400dp"
+        android:layout_height="140dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/demo_rockiton_watermark"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

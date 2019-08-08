@@ -5,6 +5,7 @@ import android.content.res.AssetManager;
 
 import com.demo.instagram_presentation.webserver.controller.ErrorController;
 import com.demo.instagram_presentation.webserver.controller.IndexController;
+import com.demo.instagram_presentation.webserver.controller.LicenseController;
 import com.demo.instagram_presentation.webserver.controller.PasswordController;
 import com.demo.instagram_presentation.webserver.controller.PreferenceController;
 import com.demo.instagram_presentation.webserver.controller.WifiController;
@@ -22,6 +23,7 @@ public class WebServerRouter {
     private WifiController wifiController;
     private ErrorController errorController;
     private PasswordController passwordController;
+    private LicenseController licenseController;
     private StaticFileHandler staticFileHandler;
     private AssetManager assetManager;
     private String lastRequestedUri;
@@ -36,6 +38,7 @@ public class WebServerRouter {
         preferenceController = new PreferenceController(context);
         wifiController = new WifiController(assetManager, errorController, context);
         passwordController = new PasswordController(assetManager, errorController);
+        licenseController = new LicenseController(context);
     }
 
     public NanoHTTPD.Response routeRequest(NanoHTTPD.IHTTPSession session) {
@@ -84,6 +87,16 @@ public class WebServerRouter {
             case "/api/v1/login":
                 if (NanoHTTPD.Method.POST.equals(requestMethod)) {
                     response = passwordController.login(getRequestBodyDataAsJson(session), lastRequestedUri);
+                }
+                break;
+            case "/api/v1/license":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = licenseController.getLicenseId();
+                }
+                break;
+            case "/api/v1/license/validate":
+                if (NanoHTTPD.Method.POST.equals(requestMethod)) {
+                    response = licenseController.validateLicenseKey(getRequestBodyDataAsJson(session));
                 }
                 break;
             // Other cases and static files requests

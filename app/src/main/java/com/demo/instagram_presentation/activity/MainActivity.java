@@ -16,15 +16,18 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.fragment.ImagePresentationFragment;
 import com.demo.instagram_presentation.util.Constants;
+import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.ScreenUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 import com.google.gson.Gson;
@@ -42,6 +45,8 @@ import butterknife.ButterKnife;
 public class MainActivity extends AppCompatActivity {
     @BindView(R.id.main_activity_txtServerInfo)
     TextView txtServerInfo;
+    @BindView(R.id.main_activity_imgWatermark)
+    ImageView imgWatermark;
 
     @BindString(R.string.pref_img_main_width)
     String imgMainWidthPrefKey;
@@ -72,6 +77,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        if (!LicenseUtil.isKeyIdFileInitialized(getApplicationContext())) {
+            LicenseUtil.initKeyIdFile(getApplicationContext());
+        }
+
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -89,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
         wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 
         startConfigServer();
+        showServerInfoText();
 
         if (isWifiConnected()) {
             setServerInfoOnWifi();
@@ -135,12 +145,12 @@ public class MainActivity extends AppCompatActivity {
 
         unregisterReceiver(appPreferenceChangedReceiver);
         unregisterReceiver(wifiConnectedReceiver);
+
+        onDestroy();
     }
 
     //TODO: refactor code
     private void setServerInfoOnWifi() {
-        String serverInfo = "Remote config server status: online";
-
         WifiInfo info = wifiManager.getConnectionInfo();
         String ssid = info.getSSID();
 
@@ -148,12 +158,22 @@ public class MainActivity extends AppCompatActivity {
         final String formatedIpAddress = String.format(Locale.ENGLISH, "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                 (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
 
-        serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
-                "Connected WiFi SSID: %s\n" +
-                "Config server IP address: %s:%d\n" +
-                "This message will disappear after 60 seconds", ssid, formatedIpAddress, Constants.WEB_SERVER_PORT);
+        new CountDownTimer(Constants.HIDE_SERVER_INFO_DELAY, 1000) {
+            @Override
+            public void onTick(long l) {
+                String serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
+                        "Connected WiFi SSID: %s\n" +
+                        "Config server IP address: %s:%d\n" +
+                        "This message will disappear after %d seconds", ssid, formatedIpAddress, Constants.WEB_SERVER_PORT, l / 1000);
 
-        txtServerInfo.setText(serverInfo);
+                txtServerInfo.setText(serverInfo);
+            }
+
+            @Override
+            public void onFinish() {
+                hideServerInfoText();
+            }
+        }.start();
     }
 
     private void setDefaultPrefValues() {
@@ -173,7 +193,10 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         webServer.stop();
-        wifiP2pManager.removeGroup(wifiP2pChannel, null);
+
+        if (wifiP2pManager != null) {
+            wifiP2pManager.removeGroup(wifiP2pChannel, null);
+        }
 
         unregisterReceiver(wifiScanReceiver);
     }
@@ -191,9 +214,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
             txtServerInfo.setText(configServerCantStartMsg);
-        } finally {
-            // Make server info text disappear after a while
-            hideServerInfoTextAfter(60000);
         }
     }
 
@@ -201,14 +221,25 @@ public class MainActivity extends AppCompatActivity {
         if (groupInfo != null) {
             String p2pNetworkName = groupInfo.getNetworkName();
             String passphrase = groupInfo.getPassphrase();
-            String serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
-                            "Wi-fi Direct SSID: \"%s\"\n" +
-                            "Passphrase: \"%s\"\n" +
-                            "Wi-fi config IP address: 192.168.49.1:%d\n" +
-                            "This message will disappear after 60 seconds",
-                    p2pNetworkName, passphrase, Constants.WEB_SERVER_PORT);
 
-            txtServerInfo.setText(serverInfo);
+            new CountDownTimer(Constants.HIDE_SERVER_INFO_DELAY, 1000) {
+                @Override
+                public void onTick(long l) {
+                    String serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
+                                    "Wi-fi Direct SSID: \"%s\"\n" +
+                                    "Passphrase: \"%s\"\n" +
+                                    "Wi-fi config IP address: 192.168.49.1:%d\n" +
+                                    "This message will disappear after %d seconds",
+                            p2pNetworkName, passphrase, Constants.WEB_SERVER_PORT, l / 1000);
+
+                    txtServerInfo.setText(serverInfo);
+                }
+
+                @Override
+                public void onFinish() {
+                    hideServerInfoText();
+                }
+            }.start();
         } else {
             txtServerInfo.setText(wifiDirectNoInfoMsg);
         }
@@ -252,8 +283,7 @@ public class MainActivity extends AppCompatActivity {
                 setServerInfoOnWifi();
                 wifiP2pManager.removeGroup(wifiP2pChannel, null);
 
-                txtServerInfo.setVisibility(View.VISIBLE);
-                hideServerInfoTextAfter(60000);
+                showServerInfoText();
 
                 getSupportFragmentManager()
                         .beginTransaction()
@@ -279,14 +309,16 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        finish();
+    private void hideServerInfoText() {
+        txtServerInfo.setVisibility(View.GONE);
+
+        if (!LicenseUtil.validateKeyFiles(getApplicationContext())) {
+            imgWatermark.setVisibility(View.VISIBLE);
+        }
     }
 
-    private void hideServerInfoTextAfter(int timeInMs) {
-        Handler handler = new Handler();
-        handler.postDelayed(() -> txtServerInfo.setVisibility(View.GONE), timeInMs);
+    private void showServerInfoText() {
+        txtServerInfo.setVisibility(View.VISIBLE);
+        imgWatermark.setVisibility(View.GONE);
     }
 }
