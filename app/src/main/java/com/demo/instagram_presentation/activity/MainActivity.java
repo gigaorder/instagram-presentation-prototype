@@ -166,7 +166,10 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
         }
 
         unregisterReceiver(appPreferenceChangedReceiver);
-        unregisterReceiver(wifiConnectReceiver);
+
+        if (wifiConnectReceiver != null) {
+            unregisterReceiver(wifiConnectReceiver);
+        }
 
         if (wifiScanResultReceiver != null) {
             unregisterReceiver(wifiScanResultReceiver);
