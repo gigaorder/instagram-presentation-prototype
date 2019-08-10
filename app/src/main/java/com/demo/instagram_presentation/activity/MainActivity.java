@@ -112,6 +112,7 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
         String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
         startConfigServer();
         showServerInfoText();
+        registerBroadcastReceivers();
 
         if (isWifiConnected()) {
             setServerInfoOnWifi();
@@ -123,9 +124,6 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
             //TODO: refactor this
             sharedPreferences.edit().putBoolean("wifi_connected", false).apply();
             // Turn on wifi and start scanning
-            wifiScanResultReceiver = new WifiScanResultReceiver();
-            IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-            registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
             wifiManager.setWifiEnabled(true);
             wifiManager.startScan();
 
@@ -145,14 +143,6 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
     protected void onStart() {
         super.onStart();
         showBackground();
-
-        wifiConnectReceiver = new WifiConnectReceiver(this);
-
-        IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
-        IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-
-        registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
-        registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
     }
 
     @Override
@@ -167,6 +157,7 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
 
         unregisterReceiver(appPreferenceChangedReceiver);
 
+        // TODO: refactor register/unregister broadcast receivers
         if (wifiConnectReceiver != null) {
             unregisterReceiver(wifiConnectReceiver);
         }
@@ -315,6 +306,11 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
         hideServerInfoText();
         hideBackground();
 
+        if (wifiConnectReceiver != null) {
+            unregisterReceiver(wifiConnectReceiver);
+            wifiConnectReceiver = null;
+        }
+
         ImagePresentationFragment imagePresentationFragment = new ImagePresentationFragment();
         Bundle bundle = new Bundle();
         bundle.putString("serverInfo", txtServerInfo.getText().toString());
@@ -350,11 +346,27 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
 
         handler.postDelayed(() -> {
             setServerInfoOnWifi();
-            wifiP2pManager.removeGroup(wifiP2pChannel, null);
+
+            if (wifiP2pChannel != null) {
+                wifiP2pManager.removeGroup(wifiP2pChannel, null);
+            }
 
             showServerInfoText();
 
             startPresentationFragment();
         }, 10000);
+    }
+
+    private void registerBroadcastReceivers() {
+        wifiConnectReceiver = new WifiConnectReceiver(this);
+        wifiScanResultReceiver = new WifiScanResultReceiver();
+
+        IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
+        IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+
+        registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
+        registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
+        registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
     }
 }
