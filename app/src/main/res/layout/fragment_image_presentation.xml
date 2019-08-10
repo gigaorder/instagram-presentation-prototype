@@ -5,12 +5,13 @@
     android:id="@+id/fragment_present_root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".fragment.ImagePresentationFragment">
+    android:background="#ffffff"
+    tools:appContext=".fragment.ImagePresentationFragment">
 
     <androidx.core.widget.ContentLoadingProgressBar
         android:id="@+id/fragment_present_progressBar"
         style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="200dp"
+        android:layout_width="400dp"
         android:layout_height="wrap_content"
         android:max="2"
         android:progress="0"
@@ -19,11 +20,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <ImageView
+        android:id="@+id/fragment_present_imgWatermark"
+        android:layout_width="400dp"
+        android:layout_height="140dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/demo_rockiton_watermark"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <Button
         android:id="@+id/fragment_present_btnExit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Exit"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -33,6 +44,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:gravity="center"
+        android:textSize="40sp"
         app:layout_constraintBottom_toTopOf="@id/fragment_present_progressBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -134,4 +146,26 @@
         android:textSize="30sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fragment_present_txtNumberOfComments" />
+
+    <TextView
+        android:id="@+id/fragment_present_txtServerInfo"
+        android:layout_width="1000dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/colorPrimary"
+        android:textSize="40sp"
+        app:layout_constraintBottom_toTopOf="@id/fragment_present_txtTimer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/fragment_present_txtTimer"
+        android:layout_width="1000dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/colorAccent"
+        android:textSize="30sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

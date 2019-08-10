@@ -1,7 +1,6 @@
 package com.demo.instagram_presentation.webserver.controller;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.net.wifi.WifiConfiguration;
@@ -10,8 +9,6 @@ import android.net.wifi.WifiManager;
 import androidx.preference.PreferenceManager;
 
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.util.Constants;
-import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 import com.demo.instagram_presentation.webserver.model.NetworkLoginInfo;
 import com.demo.instagram_presentation.webserver.util.RequestUtil;
 import com.google.gson.Gson;
@@ -73,13 +70,13 @@ public class WifiController {
         wifiManager.addNetwork(conf);
 
         List<WifiConfiguration> networkConfigs = wifiManager.getConfiguredNetworks();
-        boolean connectResult = false;
 
         for (WifiConfiguration networkConfig : networkConfigs) {
             if (networkConfig.SSID != null && networkConfig.SSID.equals("\"" + networkLoginInfo.getSsid() + "\"")) {
                 try {
+                    wifiManager.disconnect();
                     wifiManager.enableNetwork(networkConfig.networkId, true);
-                    connectResult = wifiManager.reconnect();
+                    wifiManager.reconnect();
                     break;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -87,19 +84,21 @@ public class WifiController {
             }
         }
 
+        // Wait for a bit, if network is not connected -> wrong password
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        boolean isConnected = sharedPreferences.getBoolean("wifi_connected", false);
         Map<String, Boolean> dataMap = new HashMap<>();
-        dataMap.put("result", connectResult);
+        dataMap.put("result", isConnected);
         String result = gson.toJson(dataMap);
 
         NanoHTTPD.Response response = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", result);
         RequestUtil.addCorsHeadersToResponse(response);
         response.setChunkedTransfer(true);
-
-        if (connectResult) {
-            String wifiListPrefKey = context.getResources().getString(R.string.pref_wifi_list);
-            sharedPreferences.edit().putBoolean(wifiListPrefKey, true).apply();
-            context.sendBroadcast(new Intent(Constants.WIFI_CONNECTED_ACTION));
-        }
 
         return response;
     }

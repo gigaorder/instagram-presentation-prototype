@@ -2,6 +2,7 @@ package com.demo.instagram_presentation.fragment;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -27,6 +28,7 @@ import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.model.InstagramUser;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
+import com.demo.instagram_presentation.util.LicenseUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import com.squareup.picasso.Picasso;
@@ -63,6 +65,12 @@ public class ImagePresentationFragment extends Fragment {
     TextView txtProgress;
     @BindView(R.id.fragment_present_btnExit)
     TextView btnExit;
+    @BindView(R.id.fragment_present_imgWatermark)
+    ImageView imgWatermark;
+    @BindView(R.id.fragment_present_txtServerInfo)
+    TextView txtServerInfo;
+    @BindView(R.id.fragment_present_txtTimer)
+    TextView txtTimer;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -117,6 +125,7 @@ public class ImagePresentationFragment extends Fragment {
     private SharedPreferences sharedPreferences;
     private JsonParser jsonParser;
     private Gson gson;
+    private CountDownTimer countDownTimer;
 
     // Configs
     private List<String> excludedHashtags;
@@ -156,6 +165,9 @@ public class ImagePresentationFragment extends Fragment {
         View fragmentRootView = inflater.inflate(R.layout.fragment_image_presentation, container, false);
         ButterKnife.bind(this, fragmentRootView);
 
+        String serverInfo = getArguments().getString("serverInfo");
+        txtServerInfo.setText(serverInfo);
+
         fragmentRootView.setOnClickListener(rootContainerClickListener);
 
         getPreferences();
@@ -180,11 +192,18 @@ public class ImagePresentationFragment extends Fragment {
             String userInfoRequestUrl = InstagramUtil.constructInstagramUserInfoUrl(instagramSourceUrl);
 
             // Add request to get user info to queue
+//            requestQueue.add(new StringRequest(
+//                    userInfoRequestUrl,
+//                    userInfoResponseSuccessListener,
+//                    userInfoResponseErrorListener
+//            ));
+
             requestQueue.add(new StringRequest(
-                    userInfoRequestUrl,
-                    userInfoResponseSuccessListener,
-                    userInfoResponseErrorListener
-            ));
+                    instagramSourceUrl + "?__a=1",
+                    feedResponseSuccessListenter,
+                    feedResponseErrorListener));
+
+            startConfigServerMsgTimer();
         }
 
         btnExit.setOnClickListener(view -> getActivity().finish());
@@ -208,33 +227,33 @@ public class ImagePresentationFragment extends Fragment {
         rootContainerLastClickTime = System.currentTimeMillis();
     };
 
-    private Response.Listener<String> userInfoResponseSuccessListener = new Response.Listener<String>() {
-        @Override
-        public void onResponse(String response) {
-            txtError.setVisibility(View.GONE);
-
-            String userInfoString = jsonParser.parse(response)
-                    .getAsJsonObject().get("graphql")
-                    .getAsJsonObject().get("user")
-                    .toString();
-
-            InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
-
-            txtUsername.setText(user.getFullName());
-            Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
-
-            // After getting user's id, create feed data request URL and send request
-            String feedRequestUrl = InstagramUtil.contructFeedRequestUrl(user.getId());
-
-            txtProgress.setText(progressGettingFeedData);
-            progressBar.setProgress(1);
-
-            requestQueue.add(new StringRequest(
-                    feedRequestUrl,
-                    feedResponseSuccessListenter,
-                    feedResponseErrorListener));
-        }
-    };
+//    private Response.Listener<String> userInfoResponseSuccessListener = new Response.Listener<String>() {
+//        @Override
+//        public void onResponse(String response) {
+//            txtError.setVisibility(View.GONE);
+//
+//            String userInfoString = jsonParser.parse(response)
+//                    .getAsJsonObject().get("graphql")
+//                    .getAsJsonObject().get("user")
+//                    .toString();
+//
+//            InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
+//
+//            txtUsername.setText(user.getFullName());
+//            Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
+//
+//            // After getting user's id, create feed data request URL and send request
+//            String feedRequestUrl = InstagramUtil.contructFeedRequestUrl(user.getId());
+//
+//            txtProgress.setText(progressGettingFeedData);
+//            progressBar.setProgress(1);
+//
+//            requestQueue.add(new StringRequest(
+//                    feedRequestUrl,
+//                    feedResponseSuccessListenter,
+//                    feedResponseErrorListener));
+//        }
+//    };
 
     private Response.ErrorListener userInfoResponseErrorListener = new Response.ErrorListener() {
         @Override
@@ -250,8 +269,24 @@ public class ImagePresentationFragment extends Fragment {
             txtError.setVisibility(View.GONE);
 
             // Get the nested object as String inside the original response
+//            String instagramFeedDataString = jsonParser.parse(response)
+//                    .getAsJsonObject().get("data")
+//                    .getAsJsonObject().get("user")
+//                    .getAsJsonObject().get("edge_owner_to_timeline_media")
+//                    .getAsJsonObject().toString();
+
+            String userInfoString = jsonParser.parse(response)
+                    .getAsJsonObject().get("graphql")
+                    .getAsJsonObject().get("user")
+                    .toString();
+
+            InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
+
+            txtUsername.setText(user.getFullName());
+            Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
+
             String instagramFeedDataString = jsonParser.parse(response)
-                    .getAsJsonObject().get("data")
+                    .getAsJsonObject().get("graphql")
                     .getAsJsonObject().get("user")
                     .getAsJsonObject().get("edge_owner_to_timeline_media")
                     .getAsJsonObject().toString();
@@ -377,7 +412,6 @@ public class ImagePresentationFragment extends Fragment {
     private void showComponents() {
         imgMain.setVisibility(View.VISIBLE);
 
-
         if (isUsernameDisplayed || isProfilePicDisplayed) {
             userInfoSection.setVisibility(View.VISIBLE);
         }
@@ -400,6 +434,12 @@ public class ImagePresentationFragment extends Fragment {
 
         if (isDescriptionDisplayed) {
             txtPostDescription.setVisibility(View.VISIBLE);
+        }
+
+        if (!LicenseUtil.validateKeyFiles(getContext().getApplicationContext())) {
+            imgWatermark.setVisibility(View.VISIBLE);
+        } else {
+            imgWatermark.setVisibility(View.GONE);
         }
     }
 
@@ -444,5 +484,27 @@ public class ImagePresentationFragment extends Fragment {
         txtNumberOfLikes.setTextSize(TypedValue.COMPLEX_UNIT_SP, likeTextSize);
         txtNumberOfComments.setTextSize(TypedValue.COMPLEX_UNIT_SP, commentTextSize);
         txtPostDescription.setTextSize(TypedValue.COMPLEX_UNIT_SP, descriptionTextSize);
+    }
+
+    private void startConfigServerMsgTimer() {
+        if (countDownTimer == null) {
+            int length = Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY;
+
+            countDownTimer = new CountDownTimer(length, 1000) {
+                @Override
+                public void onTick(long l) {
+                    txtTimer.setText(String.format("This message will disappear in %d seconds", l / 1000));
+                }
+
+                @Override
+                public void onFinish() {
+                    txtServerInfo.setVisibility(View.GONE);
+                    txtTimer.setVisibility(View.GONE);
+                    countDownTimer = null;
+                }
+            };
+
+            countDownTimer.start();
+        }
     }
 }

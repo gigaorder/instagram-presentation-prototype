@@ -74,6 +74,11 @@ public class WebServerRouter {
                     response = preferenceController.savePreferences(getRequestBodyDataAsJson(session));
                 }
                 break;
+            case "/api/v1/wifi":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = wifiController.getWifiList();
+                }
+                break;
             case "/api/v1/wifi/connect":
                 if (NanoHTTPD.Method.POST.equals(requestMethod)) {
                     response = wifiController.connectToWifi(getRequestBodyDataAsJson(session));

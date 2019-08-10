@@ -9,44 +9,57 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.broadcast_receiver.WifiConnectReceiver;
+import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ImagePresentationFragment;
+import com.demo.instagram_presentation.listener.WifiConnectListener;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.ScreenUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
-import com.google.gson.Gson;
+import com.squareup.picasso.Picasso;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 import butterknife.BindString;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements WifiConnectListener {
     @BindView(R.id.main_activity_txtServerInfo)
     TextView txtServerInfo;
-    @BindView(R.id.main_activity_imgWatermark)
-    ImageView imgWatermark;
+    @BindView(R.id.main_activity_txtTimer)
+    TextView txtTimer;
+    @BindView(R.id.main_activity_imgBg)
+    ImageView imgBackground;
+    @BindView(R.id.main_activity_imgLogoText)
+    ImageView imgLogoText;
+    @BindView(R.id.main_activity_imgLogo)
+    ImageView imgLogo;
 
     @BindString(R.string.pref_img_main_width)
     String imgMainWidthPrefKey;
@@ -60,18 +73,17 @@ public class MainActivity extends AppCompatActivity {
     String configServerCantStartMsg;
     @BindString(R.string.getting_p2p_info)
     String gettingInfoMsg;
-    @BindString(R.string.pref_wifi_list)
-    String wifiListPrefKey;
-    @BindString(R.string.pref_is_wifi_connected)
-    String isWifiConnectedPrefKey;
+    @BindString(R.string.pref_instagram_source)
+    String instagramSourcePrefKey;
 
-    public final static int FRAGMENT_CONTAINER_ID = R.id.settings_container;
+    public final static int FRAGMENT_CONTAINER_ID = R.id.main_activity_fragment_container;
     private NanoHttpdWebServer webServer;
     private SharedPreferences sharedPreferences;
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel wifiP2pChannel;
     private WifiManager wifiManager;
-    private Gson gson;
+    private WifiScanResultReceiver wifiScanResultReceiver;
+    private WifiConnectReceiver wifiConnectReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,96 +96,107 @@ public class MainActivity extends AppCompatActivity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.hide();
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        gson = new Gson();
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Picasso.get().load(R.drawable.fallback_screen_bg_16_9).centerCrop().fit().noFade().into(imgBackground);
+
+        hideServerInfoText();
+
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
         setDefaultPrefValues();
 
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.hide();
-
-        wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-
+        String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
         startConfigServer();
         showServerInfoText();
 
         if (isWifiConnected()) {
             setServerInfoOnWifi();
 
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
-                    .commit();
+            if (instagramSourceUrl != null) {
+                startPresentationFragment();
+            }
         } else {
-            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
+            //TODO: refactor this
+            sharedPreferences.edit().putBoolean("wifi_connected", false).apply();
             // Turn on wifi and start scanning
+            wifiScanResultReceiver = new WifiScanResultReceiver();
+            IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+            registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
             wifiManager.setWifiEnabled(true);
             wifiManager.startScan();
-            registerReceiver(wifiScanReceiver,
-                    new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-            // Start Wi-fi Direct
-            // Config server info will be set after Wi-fi Direct is established (in GroupInfoListener)
+
+            // Start Wi-Fi Direct
+            // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
             wifiP2pManager = (WifiP2pManager) getSystemService(WIFI_P2P_SERVICE);
             wifiP2pChannel = wifiP2pManager.initialize(getApplicationContext(), getMainLooper(), null);
             wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
 
             Handler handler = new Handler();
-            handler.postDelayed(() -> wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 2000);
+            handler.postDelayed(() ->
+                    wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000); // Delay because Wi-Fi Direct may not have been initialized
         }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        showBackground();
 
-        IntentFilter ifPrefChanged = new IntentFilter();
-        ifPrefChanged.addAction(Constants.PREFERENCE_CHANGED_ACTION);
+        wifiConnectReceiver = new WifiConnectReceiver(this);
 
-        IntentFilter ifWifiConnected = new IntentFilter();
-        ifWifiConnected.addAction(Constants.WIFI_CONNECTED_ACTION);
+        IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
+        IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
 
         registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
-        registerReceiver(wifiConnectedReceiver, ifWifiConnected);
+        registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
 
-        unregisterReceiver(appPreferenceChangedReceiver);
-        unregisterReceiver(wifiConnectedReceiver);
+        webServer.stop();
 
-        onDestroy();
+        if (wifiP2pManager != null) {
+            wifiP2pManager.removeGroup(wifiP2pChannel, null);
+        }
+
+        unregisterReceiver(appPreferenceChangedReceiver);
+        unregisterReceiver(wifiConnectReceiver);
+
+        if (wifiScanResultReceiver != null) {
+            unregisterReceiver(wifiScanResultReceiver);
+        }
+
+        finish();
     }
 
-    //TODO: refactor code
     private void setServerInfoOnWifi() {
         WifiInfo info = wifiManager.getConnectionInfo();
+        int ipAddress = info.getIpAddress();
         String ssid = info.getSSID();
-
-        int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
-        final String formatedIpAddress = String.format(Locale.ENGLISH, "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
+        final String formatedIpAddress = String.format(Locale.ENGLISH, "%d.%d.%d.%d",
+                (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                 (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
 
-        new CountDownTimer(Constants.HIDE_SERVER_INFO_DELAY, 1000) {
-            @Override
-            public void onTick(long l) {
-                String serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
-                        "Connected WiFi SSID: %s\n" +
-                        "Config server IP address: %s:%d\n" +
-                        "This message will disappear after %d seconds", ssid, formatedIpAddress, Constants.WEB_SERVER_PORT, l / 1000);
+        String serverStatus = "Status: Online | ";
+        String wifiSsid = String.format("Connected WiFi SSID: %s\n", ssid);
+        String configServerIp = String.format("Config server: %s:%d", formatedIpAddress, Constants.WEB_SERVER_PORT);
+        int prevLength = serverStatus.length() + wifiSsid.length();
 
-                txtServerInfo.setText(serverInfo);
-            }
+        Spannable serverInfo = new SpannableString(serverStatus + wifiSsid + configServerIp);
 
-            @Override
-            public void onFinish() {
-                hideServerInfoText();
-            }
-        }.start();
+        serverInfo.setSpan(new ForegroundColorSpan(Color.GREEN), 8, 14, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE); // "online" is green
+        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), serverStatus.length() + 21, serverStatus.length() + 21 + ssid.length() + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // SSID is bold
+        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLength + 15, prevLength + 15 + formatedIpAddress.length() + 1 + String.valueOf(Constants.WEB_SERVER_PORT).length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
+
+        txtServerInfo.setText(serverInfo);
+
+        startConfigServerMsgTimer(true);
     }
 
     private void setDefaultPrefValues() {
@@ -183,22 +206,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (sharedPreferences.getString(imgMainHeightPrefKey, null) == null) {
-            int height = (int) (ScreenUtil.getScreenHeight(this) * 0.75); // Default percentage, can be changed easily -> no need to extract as a constant
+            int height = (int) (ScreenUtil.getScreenHeight(this) * 0.75); // Likely to be changed by user -> no need to extract as a constant
             sharedPreferences.edit().putString(imgMainHeightPrefKey, String.valueOf(height)).apply();
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        webServer.stop();
-
-        if (wifiP2pManager != null) {
-            wifiP2pManager.removeGroup(wifiP2pChannel, null);
-        }
-
-        unregisterReceiver(wifiScanReceiver);
     }
 
     private boolean isWifiConnected() {
@@ -218,28 +228,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private WifiP2pManager.GroupInfoListener wifiP2pInfoListener = groupInfo -> {
+        // Set server info on WiFi Direct
         if (groupInfo != null) {
             String p2pNetworkName = groupInfo.getNetworkName();
             String passphrase = groupInfo.getPassphrase();
 
-            new CountDownTimer(Constants.HIDE_SERVER_INFO_DELAY, 1000) {
-                @Override
-                public void onTick(long l) {
-                    String serverInfo = String.format(Locale.ENGLISH, "Status: online\n" +
-                                    "Wi-fi Direct SSID: \"%s\"\n" +
-                                    "Passphrase: \"%s\"\n" +
-                                    "Wi-fi config IP address: 192.168.49.1:%d\n" +
-                                    "This message will disappear after %d seconds",
-                            p2pNetworkName, passphrase, Constants.WEB_SERVER_PORT, l / 1000);
+            String serverStatus = "Status: Online\n";
+            String wifiDirectSsid = String.format("WiFi Direct SSID: \"%s\" | ", p2pNetworkName);
+            String password = String.format("Password: \"%s\"\n", passphrase);
+            String configServerIp = String.format("Config server: 192.168.49.1:%d/wifi", Constants.WEB_SERVER_PORT, Constants.WEB_SERVER_PORT);
 
-                    txtServerInfo.setText(serverInfo);
-                }
+            int prevLength1 = serverStatus.length() + wifiDirectSsid.length();
+            int prevLengthTotal = prevLength1 + password.length();
 
-                @Override
-                public void onFinish() {
-                    hideServerInfoText();
-                }
-            }.start();
+            Spannable serverInfo = new SpannableString(serverStatus + wifiDirectSsid + password + configServerIp);
+
+            serverInfo.setSpan(new ForegroundColorSpan(Color.GREEN), 8, 14, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE); // "online" is green
+            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), serverStatus.length() + 18, serverStatus.length() + 18 + p2pNetworkName.length() + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // SSID is bold
+            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLength1 + 10, prevLength1 + 10 + passphrase.length() + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // Password is bold
+            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLengthTotal + 15, prevLengthTotal + 15 + 12 + 1 + String.valueOf(Constants.WEB_SERVER_PORT).length() + 5, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
+
+            txtServerInfo.setText(serverInfo);
+
+            startConfigServerMsgTimer(false);
         } else {
             txtServerInfo.setText(wifiDirectNoInfoMsg);
         }
@@ -256,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
             if (reason == WifiP2pManager.ERROR) {
                 txtServerInfo.setText(wifiDirectCantStartMsg);
             } else {
-                // Wi-fi Direct may have already been turned on
+                // Wi-Fi Direct may have already been turned on
                 txtServerInfo.setText(gettingInfoMsg);
             }
         }
@@ -265,60 +276,82 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
-                    .commit();
+            startPresentationFragment();
         }
     };
 
-    private BroadcastReceiver wifiConnectedReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            txtServerInfo.setText("Wifi detected, app will restart after 10 seconds");
-            Handler handler = new Handler();
-
-            handler.postDelayed(() -> {
-                unregisterReceiver(wifiScanReceiver);
-                setServerInfoOnWifi();
-                wifiP2pManager.removeGroup(wifiP2pChannel, null);
-
-                showServerInfoText();
-
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(FRAGMENT_CONTAINER_ID, new ImagePresentationFragment())
-                        .commit();
-            }, 10000);
-        }
-    };
-
-    private BroadcastReceiver wifiScanReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context c, Intent intent) {
-            if (intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
-                List<ScanResult> wifiScanResults = wifiManager.getScanResults();
-                Set<String> wifiSsidSet = new HashSet<>();
-
-                for (ScanResult wifiScanResult : wifiScanResults) {
-                    wifiSsidSet.add(wifiScanResult.SSID);
-                }
-
-                sharedPreferences.edit().putString(wifiListPrefKey, gson.toJson(wifiSsidSet)).apply();
-            }
-        }
-    };
 
     private void hideServerInfoText() {
         txtServerInfo.setVisibility(View.GONE);
-
-        if (!LicenseUtil.validateKeyFiles(getApplicationContext())) {
-            imgWatermark.setVisibility(View.VISIBLE);
-        }
+        txtTimer.setVisibility(View.GONE);
     }
 
     private void showServerInfoText() {
         txtServerInfo.setVisibility(View.VISIBLE);
-        imgWatermark.setVisibility(View.GONE);
+    }
+
+    private void startConfigServerMsgTimer(boolean isOnWifi) {
+        int length = isOnWifi ? Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY : Constants.HIDE_SERVER_INFO_ON_WIFI_DIRECT_DELAY;
+
+        new CountDownTimer(length, 1000) {
+            @Override
+            public void onTick(long l) {
+                txtTimer.setText(String.format("This message will disappear in %d seconds", l / 1000));
+            }
+
+            @Override
+            public void onFinish() {
+                hideServerInfoText();
+            }
+        }.start();
+
+        txtTimer.setVisibility(View.VISIBLE);
+    }
+
+    private void startPresentationFragment() {
+        hideServerInfoText();
+        hideBackground();
+
+        ImagePresentationFragment imagePresentationFragment = new ImagePresentationFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString("serverInfo", txtServerInfo.getText().toString());
+        imagePresentationFragment.setArguments(bundle);
+
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(FRAGMENT_CONTAINER_ID, imagePresentationFragment)
+                .commit();
+    }
+
+    private void showBackground() {
+        imgBackground.setVisibility(View.VISIBLE);
+        imgLogo.setVisibility(View.VISIBLE);
+        imgLogoText.setVisibility(View.VISIBLE);
+    }
+
+    private void hideBackground() {
+        imgBackground.setVisibility(View.GONE);
+        imgLogo.setVisibility(View.GONE);
+        imgLogoText.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void onWifiConnected() {
+        unregisterReceiver(wifiConnectReceiver);
+        //TODO: refactor this
+        sharedPreferences.edit().putBoolean("wifi_connected", true).apply();
+        showServerInfoText();
+
+        txtServerInfo.setText("Wifi detected, app will restart after 10 seconds");
+        Handler handler = new Handler();
+
+        handler.postDelayed(() -> {
+            setServerInfoOnWifi();
+            wifiP2pManager.removeGroup(wifiP2pChannel, null);
+
+            showServerInfoText();
+
+            startPresentationFragment();
+        }, 10000);
     }
 }
