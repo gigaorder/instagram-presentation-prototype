@@ -1,22 +1,23 @@
 package com.demo.instagram_presentation.util;
 
-import android.content.Context;
+import android.os.Environment;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class LicenseUtil {
-    public static boolean isKeyIdFileInitialized(Context context) {
-        File file = new File(context.getFilesDir(), Constants.LICENSE_ID_FILENAME);
+    public static boolean isKeyIdFileInitialized() {
+        File file = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
 
         return file.exists();
     }
 
-    public static void initKeyIdFile(Context context) {
-        File licenseFile = new File(context.getFilesDir(), Constants.LICENSE_ID_FILENAME);
+    public static void initKeyIdFile() {
+        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
 
         int keyId = ThreadLocalRandom.current().nextInt(Constants.BASE_KEY_SEED_MINIMUM_VALUE, Constants.BASE_KEY_SEED_MAXIMUM_VALUE);
 
@@ -30,8 +31,8 @@ public class LicenseUtil {
         }
     }
 
-    public static void writeKeyFile(Context context, String licenseKey) {
-        File licenseFile = new File(context.getFilesDir(), Constants.LICENSE_KEY_FILENAME);
+    public static void writeKeyFile(String licenseKey) {
+        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_KEY_FILENAME);
 
         try {
             FileWriter fileWriter = new FileWriter(licenseFile);
@@ -43,8 +44,8 @@ public class LicenseUtil {
         }
     }
 
-    public static int readKeyIdFromFile(Context context) {
-        File licenseFile = new File(context.getFilesDir(), Constants.LICENSE_ID_FILENAME);
+    public static int readKeyIdFromFile() {
+        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
 
         try {
             FileInputStream fis = new FileInputStream(licenseFile);
@@ -52,26 +53,22 @@ public class LicenseUtil {
             fis.read(data);
             fis.close();
 
-            return Integer.parseInt(new String(data, "UTF-8"));
+            return Integer.parseInt(new String(data, StandardCharsets.UTF_8));
         } catch (IOException e) {
             e.printStackTrace();
-            return Integer.MIN_VALUE;
+            return Integer.MAX_VALUE;
         }
     }
 
     public static boolean validateKey(int keyId, int key) {
         int correctKey = generateKeyFromKeyId(keyId);
 
-        if (correctKey == key) {
-            return true;
-        } else {
-            return false;
-        }
+        return correctKey == key;
     }
 
-    public static boolean validateKeyFiles(Context context) {
-        int keyId = readKeyIdFromFile(context);
-        int key = readKeyFromFile(context);
+    public static boolean validateKeyFiles() {
+        int keyId = readKeyIdFromFile();
+        int key = readKeyFromFile();
 
         return validateKey(keyId, key);
     }
@@ -83,8 +80,8 @@ public class LicenseUtil {
         return keyId;
     }
 
-    private static int readKeyFromFile(Context context) {
-        File licenseFile = new File(context.getFilesDir(), Constants.LICENSE_KEY_FILENAME);
+    private static int readKeyFromFile() {
+        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_KEY_FILENAME);
 
         try {
             FileInputStream fis = new FileInputStream(licenseFile);
@@ -92,7 +89,7 @@ public class LicenseUtil {
             fis.read(data);
             fis.close();
 
-            return Integer.parseInt(new String(data, "UTF-8"));
+            return Integer.parseInt(new String(data, StandardCharsets.UTF_8));
         } catch (IOException e) {
             e.printStackTrace();
             return Integer.MIN_VALUE;

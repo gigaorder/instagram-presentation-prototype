@@ -13,6 +13,8 @@ import com.demo.instagram_presentation.webserver.model.NetworkLoginInfo;
 import com.demo.instagram_presentation.webserver.util.RequestUtil;
 import com.google.gson.Gson;
 
+import org.apache.commons.text.StringEscapeUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -62,10 +64,9 @@ public class WifiController {
 
     public NanoHTTPD.Response connectToWifi(String requestBodyData) {
         NetworkLoginInfo networkLoginInfo = gson.fromJson(requestBodyData, NetworkLoginInfo.class);
-
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"" + networkLoginInfo.getSsid() + "\"";
-        conf.preSharedKey = "\"" + networkLoginInfo.getPassphrase() + "\"";
+        conf.preSharedKey = "\"" + StringEscapeUtils.escapeJava(networkLoginInfo.getPassphrase()) + "\"";
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         wifiManager.addNetwork(conf);
 
@@ -91,7 +92,8 @@ public class WifiController {
             e.printStackTrace();
         }
 
-        boolean isConnected = sharedPreferences.getBoolean("wifi_connected", false);
+        String isWifiConnectedPrefKey = context.getResources().getString(R.string.pref_is_wifi_connected);
+        boolean isConnected = sharedPreferences.getBoolean(isWifiConnectedPrefKey, false);
         Map<String, Boolean> dataMap = new HashMap<>();
         dataMap.put("result", isConnected);
         String result = gson.toJson(dataMap);

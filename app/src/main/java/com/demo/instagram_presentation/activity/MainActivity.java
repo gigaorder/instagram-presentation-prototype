@@ -36,6 +36,7 @@ import com.demo.instagram_presentation.broadcast_receiver.WifiConnectReceiver;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ImagePresentationFragment;
 import com.demo.instagram_presentation.listener.WifiConnectListener;
+import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.ScreenUtil;
@@ -54,6 +55,8 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
     TextView txtServerInfo;
     @BindView(R.id.main_activity_txtTimer)
     TextView txtTimer;
+    @BindView(R.id.main_activity_txtError)
+    TextView txtError;
     @BindView(R.id.main_activity_imgBg)
     ImageView imgBackground;
     @BindView(R.id.main_activity_imgLogoText)
@@ -75,6 +78,10 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
     String gettingInfoMsg;
     @BindString(R.string.pref_instagram_source)
     String instagramSourcePrefKey;
+    @BindString(R.string.pref_is_wifi_connected)
+    String isWifiConnectedPrefKey;
+    @BindString(R.string.source_url_not_set)
+    String errorSourceUrlNotSet;
 
     public final static int FRAGMENT_CONTAINER_ID = R.id.main_activity_fragment_container;
     private NanoHttpdWebServer webServer;
@@ -89,19 +96,24 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (!LicenseUtil.isKeyIdFileInitialized(getApplicationContext())) {
-            LicenseUtil.initKeyIdFile(getApplicationContext());
+        if (!LicenseUtil.isKeyIdFileInitialized()) {
+            LicenseUtil.initKeyIdFile();
         }
 
+        // Set fullscreen mode
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
+
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        // Load background images
         Picasso.get().load(R.drawable.fallback_screen_bg_16_9).centerCrop().fit().noFade().into(imgBackground);
+        Picasso.get().load(R.drawable.feed2wall_logo_white).centerCrop().fit().noFade().into(imgLogoText);
+        Picasso.get().load(R.drawable.rockiton).centerCrop().fit().noFade().into(imgLogo);
 
         hideServerInfoText();
 
@@ -110,6 +122,7 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
         setDefaultPrefValues();
 
         String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
+
         startConfigServer();
         showServerInfoText();
         registerBroadcastReceivers();
@@ -119,10 +132,11 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
 
             if (instagramSourceUrl != null) {
                 startPresentationFragment();
+            } else {
+                txtError.setText(errorSourceUrlNotSet);
             }
         } else {
-            //TODO: refactor this
-            sharedPreferences.edit().putBoolean("wifi_connected", false).apply();
+            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
             // Turn on wifi and start scanning
             wifiManager.setWifiEnabled(true);
             wifiManager.startScan();
@@ -135,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
 
             Handler handler = new Handler();
             handler.postDelayed(() ->
-                    wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000); // Delay because Wi-Fi Direct may not have been initialized
+                    wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000); // Delay because Wi-Fi Direct may not be initialized immediately
         }
     }
 
@@ -155,16 +169,9 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
             wifiP2pManager.removeGroup(wifiP2pChannel, null);
         }
 
-        unregisterReceiver(appPreferenceChangedReceiver);
-
-        // TODO: refactor register/unregister broadcast receivers
-        if (wifiConnectReceiver != null) {
-            unregisterReceiver(wifiConnectReceiver);
-        }
-
-        if (wifiScanResultReceiver != null) {
-            unregisterReceiver(wifiScanResultReceiver);
-        }
+        BroadcastReceiverUtil.unregisterReceiver(this, appPreferenceChangedReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, wifiConnectReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
 
         finish();
     }
@@ -306,10 +313,7 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
         hideServerInfoText();
         hideBackground();
 
-        if (wifiConnectReceiver != null) {
-            unregisterReceiver(wifiConnectReceiver);
-            wifiConnectReceiver = null;
-        }
+        BroadcastReceiverUtil.unregisterReceiver(this, wifiConnectReceiver);
 
         ImagePresentationFragment imagePresentationFragment = new ImagePresentationFragment();
         Bundle bundle = new Bundle();
@@ -336,25 +340,25 @@ public class MainActivity extends AppCompatActivity implements WifiConnectListen
 
     @Override
     public void onWifiConnected() {
-        unregisterReceiver(wifiConnectReceiver);
-        //TODO: refactor this
-        sharedPreferences.edit().putBoolean("wifi_connected", true).apply();
-        showServerInfoText();
-
-        txtServerInfo.setText("Wifi detected, app will restart after 10 seconds");
-        Handler handler = new Handler();
-
-        handler.postDelayed(() -> {
-            setServerInfoOnWifi();
-
-            if (wifiP2pChannel != null) {
-                wifiP2pManager.removeGroup(wifiP2pChannel, null);
-            }
-
+        if (!isWifiConnected()) {
+            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
             showServerInfoText();
 
-            startPresentationFragment();
-        }, 10000);
+            txtServerInfo.setText("Wifi detected, app will restart after 10 seconds");
+            Handler handler = new Handler();
+
+            handler.postDelayed(() -> {
+                setServerInfoOnWifi();
+
+                if (wifiP2pChannel != null) {
+                    wifiP2pManager.removeGroup(wifiP2pChannel, null);
+                }
+
+                showServerInfoText();
+
+                startPresentationFragment();
+            }, 10000);
+        }
     }
 
     private void registerBroadcastReceivers() {

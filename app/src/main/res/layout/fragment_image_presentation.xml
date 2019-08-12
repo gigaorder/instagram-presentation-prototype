@@ -29,15 +29,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <Button
-        android:id="@+id/fragment_present_btnExit"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Exit"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
     <TextView
         android:id="@+id/fragment_present_txtProgress"
         android:layout_width="wrap_content"
@@ -149,7 +140,7 @@
 
     <TextView
         android:id="@+id/fragment_present_txtServerInfo"
-        android:layout_width="1000dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:textColor="@color/colorPrimary"
@@ -160,7 +151,7 @@
 
     <TextView
         android:id="@+id/fragment_present_txtTimer"
-        android:layout_width="1000dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:textColor="@color/colorAccent"

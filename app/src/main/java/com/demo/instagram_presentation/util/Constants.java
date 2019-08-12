@@ -33,8 +33,8 @@ public class Constants {
     public static final int BASE_KEY_SEED_MAXIMUM_VALUE = 10000;
     public static final int KEY_MULTIPLICATION_FACTOR = 12;
     public static final int KEY_ADDITION_FACTOR = 1234;
-    public static final String LICENSE_ID_FILENAME = "key-id.txt";
-    public static final String LICENSE_KEY_FILENAME = "key.txt";
+    public static final String LICENSE_ID_FILENAME = "feed2wall-key-id.txt";
+    public static final String LICENSE_KEY_FILENAME = "feed2wall-key.txt";
 
     //View visibility hiding/showing
     public static final int HIDE_SERVER_INFO_ON_WIFI_DELAY = 120 * 1000; //in ms

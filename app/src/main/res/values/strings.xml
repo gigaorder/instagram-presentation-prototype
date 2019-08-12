@@ -3,9 +3,9 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="source_url_not_set">Instagram source URL is not set, please use the config server to setup</string>
+    <string name="source_url_not_set">Instagram source URL is not set, please go to config web server to set it first</string>
     <string name="invalid_source_url">Invalid Instagram user URL, please specify a valid URL</string>
-    <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram</string>
+    <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram, make sure the URL is valid</string>
     <string name="progress_getting_user_info">0/2: Getting user info</string>
     <string name="progress_getting_feed_data">1/2: Getting data from user\'s feed</string>
     <string name="progress_done">2/2: All done!</string>
@@ -53,4 +53,5 @@
     <string name="getting_p2p_info">Getting Wi-Fi Direct info...</string>
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
+    <string name="source_url_error">Can not get valid data from Instagram source URL, please check the URL again</string>
 </resources>

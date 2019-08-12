@@ -31,6 +31,8 @@ import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.stream.MalformedJsonException;
 import com.squareup.picasso.Picasso;
 
 import java.text.DecimalFormat;
@@ -63,8 +65,6 @@ public class ImagePresentationFragment extends Fragment {
     ContentLoadingProgressBar progressBar;
     @BindView(R.id.fragment_present_txtProgress)
     TextView txtProgress;
-    @BindView(R.id.fragment_present_btnExit)
-    TextView btnExit;
     @BindView(R.id.fragment_present_imgWatermark)
     ImageView imgWatermark;
     @BindView(R.id.fragment_present_txtServerInfo)
@@ -118,6 +118,8 @@ public class ImagePresentationFragment extends Fragment {
     String descriptionTextSizePrefKey;
     @BindString(R.string.pref_present_interval)
     String presentIntervalPrefKey;
+    @BindString(R.string.source_url_error)
+    String sourceUrlError;
 
     private RequestQueue requestQueue;
     private Runnable imagePresentationLoader;
@@ -172,6 +174,7 @@ public class ImagePresentationFragment extends Fragment {
 
         getPreferences();
         initComponentsSize();
+        showWatermark();
 
         // Hide components, show them after the images are loaded
         hideComponents();
@@ -205,8 +208,6 @@ public class ImagePresentationFragment extends Fragment {
 
             startConfigServerMsgTimer();
         }
-
-        btnExit.setOnClickListener(view -> getActivity().finish());
 
         return fragmentRootView;
     }
@@ -275,30 +276,38 @@ public class ImagePresentationFragment extends Fragment {
 //                    .getAsJsonObject().get("edge_owner_to_timeline_media")
 //                    .getAsJsonObject().toString();
 
-            String userInfoString = jsonParser.parse(response)
-                    .getAsJsonObject().get("graphql")
-                    .getAsJsonObject().get("user")
-                    .toString();
+            try {
+                String userInfoString = jsonParser.parse(response)
+                        .getAsJsonObject().get("graphql")
+                        .getAsJsonObject().get("user")
+                        .toString();
 
-            InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
+                InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
 
-            txtUsername.setText(user.getFullName());
-            Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
+                txtUsername.setText(user.getFullName());
+                Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
 
-            String instagramFeedDataString = jsonParser.parse(response)
-                    .getAsJsonObject().get("graphql")
-                    .getAsJsonObject().get("user")
-                    .getAsJsonObject().get("edge_owner_to_timeline_media")
-                    .getAsJsonObject().toString();
+                String instagramFeedDataString = jsonParser.parse(response)
+                        .getAsJsonObject().get("graphql")
+                        .getAsJsonObject().get("user")
+                        .getAsJsonObject().get("edge_owner_to_timeline_media")
+                        .getAsJsonObject().toString();
 
-            // Extract the image URLs from the retrieved instagram feed data
-            InstagramFeedData instagramFeedData = gson.fromJson(instagramFeedDataString, InstagramFeedData.class);
-            final List<InstagramPost> postsToDisplay = filterPostsToDisplay(instagramFeedData.getPosts());
+                // Extract the image URLs from the retrieved instagram feed data
+                InstagramFeedData instagramFeedData = gson.fromJson(instagramFeedDataString, InstagramFeedData.class);
+                final List<InstagramPost> postsToDisplay = filterPostsToDisplay(instagramFeedData.getPosts());
 
-            txtProgress.setText(progressDone);
-            progressBar.setProgress(2);
+                txtProgress.setText(progressDone);
+                progressBar.setProgress(2);
 
-            startImagePresentation(postsToDisplay);
+                startImagePresentation(postsToDisplay);
+            } catch (JsonSyntaxException e) {
+                // Data retrieved from source URL can't be parsed, it can be due to an invalid URL
+                hideProgress();
+                showWatermark();
+                txtError.setText(sourceUrlError);
+                txtError.setVisibility(View.VISIBLE);
+            }
         }
     };
 
@@ -307,6 +316,7 @@ public class ImagePresentationFragment extends Fragment {
         public void onErrorResponse(VolleyError error) {
             txtError.setVisibility(View.VISIBLE);
             txtError.setText(errorFeedRequestFailed);
+            showWatermark();
         }
     };
 
@@ -348,16 +358,19 @@ public class ImagePresentationFragment extends Fragment {
                 txtPostDescription.setText(post.getPostDescription());
 
                 showComponents();
-
-                progressBar.setVisibility(View.GONE);
-                txtProgress.setVisibility(View.GONE);
-                progressBar.setProgress(0);
+                hideProgress();
 
                 handler.postDelayed(this, presentInterval);
             }
         };
 
         handler.post(imagePresentationLoader);
+    }
+
+    private void hideProgress() {
+        progressBar.setVisibility(View.GONE);
+        txtProgress.setVisibility(View.GONE);
+        progressBar.setProgress(0);
     }
 
     private List<InstagramPost> filterPostsToDisplay(List<InstagramPost> posts) {
@@ -436,7 +449,11 @@ public class ImagePresentationFragment extends Fragment {
             txtPostDescription.setVisibility(View.VISIBLE);
         }
 
-        if (!LicenseUtil.validateKeyFiles(getContext().getApplicationContext())) {
+        showWatermark();
+    }
+
+    private void showWatermark() {
+        if (!LicenseUtil.validateKeyFiles()) {
             imgWatermark.setVisibility(View.VISIBLE);
         } else {
             imgWatermark.setVisibility(View.GONE);

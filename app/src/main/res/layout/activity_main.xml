@@ -20,7 +20,6 @@
         android:layout_width="900dp"
         android:layout_height="285dp"
         android:layout_marginBottom="100dp"
-        android:src="@drawable/feed2wall_logo_white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -31,7 +30,6 @@
         android:layout_width="316dp"
         android:layout_height="335dp"
         android:layout_marginBottom="25dp"
-        android:src="@drawable/rockiton"
         app:layout_constraintBottom_toTopOf="@id/main_activity_imgLogoText"
         app:layout_constraintEnd_toEndOf="@id/main_activity_imgLogoText"
         app:layout_constraintStart_toStartOf="@id/main_activity_imgLogoText" />
@@ -43,7 +41,6 @@
         android:layout_marginTop="100dp"
         android:gravity="center"
         android:lineHeight="80sp"
-        android:text="Status: Online | Connected Wifi SSID: giga5\nConfig server: 192.168.1.60:8888"
         android:textColor="#ffffff"
         android:textSize="50sp"
         app:layout_constraintEnd_toEndOf="@id/main_activity_imgLogoText"
@@ -56,12 +53,22 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="40dp"
         android:gravity="center"
-        android:text="This message will disappear in 60 seconds"
         android:textColor="#ffffff"
         android:textSize="30sp"
         app:layout_constraintEnd_toEndOf="@id/main_activity_txtServerInfo"
         app:layout_constraintStart_toStartOf="@id/main_activity_txtServerInfo"
         app:layout_constraintTop_toBottomOf="@id/main_activity_txtServerInfo" />
+
+    <TextView
+        android:id="@+id/main_activity_txtError"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="#ffffff"
+        android:textSize="40sp"
+        app:layout_constraintEnd_toEndOf="@id/main_activity_txtTimer"
+        app:layout_constraintStart_toStartOf="@id/main_activity_txtTimer"
+        app:layout_constraintTop_toBottomOf="@id/main_activity_txtTimer" />
 
     <FrameLayout
         android:id="@+id/main_activity_fragment_container"
