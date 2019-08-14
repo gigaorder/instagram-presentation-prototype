@@ -37,4 +37,8 @@ public class LicenseController {
 
         return response;
     }
+
+    public NanoHTTPD.Response isDeviceValidated() {
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/plain", String.valueOf(LicenseUtil.validateKeyFiles()));
+    }
 }

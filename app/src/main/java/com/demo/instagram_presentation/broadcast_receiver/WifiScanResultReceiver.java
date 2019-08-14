@@ -7,9 +7,8 @@ import android.content.SharedPreferences;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 
-import androidx.preference.PreferenceManager;
-
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.google.gson.Gson;
 
 import java.util.HashSet;
@@ -22,17 +21,17 @@ public class WifiScanResultReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
+            String wifiListPrefKey = context.getResources().getString(R.string.pref_wifi_list);
             WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
-            Gson gson = new Gson();
-            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext());
+            SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
             List<ScanResult> wifiScanResults = wifiManager.getScanResults();
             Set<String> wifiSsidSet = new HashSet<>();
+            Gson gson = new Gson();
 
             for (ScanResult wifiScanResult : wifiScanResults) {
                 wifiSsidSet.add(wifiScanResult.SSID);
             }
 
-            String wifiListPrefKey = context.getResources().getString(R.string.pref_wifi_list);
             sharedPreferences.edit().putString(wifiListPrefKey, gson.toJson(wifiSsidSet)).apply();
         }
     }

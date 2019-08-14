@@ -1,14 +1,25 @@
 <resources>
     <string name="app_name">Feed2Wall</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
+    <!--Messages-->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="source_url_not_set">Instagram source URL is not set, please go to config web server to set it first</string>
     <string name="invalid_source_url">Invalid Instagram user URL, please specify a valid URL</string>
     <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram, make sure the URL is valid</string>
-    <string name="progress_getting_user_info">0/2: Getting user info</string>
-    <string name="progress_getting_feed_data">1/2: Getting data from user\'s feed</string>
-    <string name="progress_done">2/2: All done!</string>
+    <string name="exit">Exit</string>
+    <string name="go_back_to_main_screen">Go back to main screen</string>
+    <string name="wifi_direct_no_info">Can\'t get Wi-Fi Direct info</string>
+    <string name="wifi_direct_cant_start">Can\'t start Wi-Fi Direct</string>
+    <string name="config_server_cant_start">Config server status: offline. This message will disappear after 60 seconds</string>
+    <string name="source_url_error">Can not get valid data from Instagram source URL, please check the URL again</string>
+    <string name="getting_p2p_info">Getting Wi-Fi Direct info…</string>
+    <string name="wifi_detected">"Wifi detected, app will restart after 10 seconds"</string>
+
+    <string name="progress_getting_user_info">Getting data from user\'s Instagram feed</string>
+    <string name="progress_getting_feed_data">Retrieving Instagram posts</string>
+    <string name="progress_done">All done!</string>
+
+    <!--Preferences keys, summaries and titles-->
     <string name="pref_instagram_source">instagram_source</string>
     <string name="pref_excluded_hashtags">excluded_hashtags</string>
     <string name="pref_post_no">post_no</string>
@@ -31,8 +42,6 @@
     <string name="pref_is_post_likes_displayed_title">Post likes</string>
     <string name="pref_is_post_comments_displayed_title">Post comments</string>
     <string name="pref_is_post_description_displayed_title">Post Description</string>
-    <string name="exit">Exit</string>
-    <string name="go_back_to_main_screen">Go back to main screen</string>
     <string name="pref_category_size_title">Size configurations</string>
     <string name="pref_img_main_width">main_img_width</string>
     <string name="pref_img_main_height">main_img_height</string>
@@ -47,11 +56,6 @@
     <string name="pref_comment_text_size">comment_text_size</string>
     <string name="pref_description_text_size">description_text_size</string>
     <string name="pref_present_interval">present_interval</string>
-    <string name="wifi_direct_no_info">Can\'t get Wi-Fi Direct info</string>
-    <string name="wifi_direct_cant_start">Can\'t start Wi-Fi Direct</string>
-    <string name="config_server_cant_start">Config server status: offline. This message will disappear after 60 seconds</string>
-    <string name="getting_p2p_info">Getting Wi-Fi Direct info...</string>
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
-    <string name="source_url_error">Can not get valid data from Instagram source URL, please check the URL again</string>
 </resources>

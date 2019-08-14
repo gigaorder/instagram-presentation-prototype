@@ -1,13 +1,18 @@
 package com.demo.instagram_presentation.fragment;
 
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,34 +22,39 @@ import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.activity.MainActivity;
-import com.demo.instagram_presentation.model.InstagramFeedData;
+import com.demo.instagram_presentation.data.scraper.ScrollableWebScraper;
 import com.demo.instagram_presentation.model.InstagramPost;
-import com.demo.instagram_presentation.model.InstagramUser;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.stream.MalformedJsonException;
 import com.squareup.picasso.Picasso;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 
 import butterknife.BindString;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class ImagePresentationFragment extends Fragment {
+public class ImageSlideFragment extends Fragment implements ScrollableWebScraper.HtmlExtractionListener {
     @BindView(R.id.fragment_present_imgMain)
     ImageView imgMain;
     @BindView(R.id.fragment_present_txtError)
@@ -71,6 +81,8 @@ public class ImagePresentationFragment extends Fragment {
     TextView txtServerInfo;
     @BindView(R.id.fragment_present_txtTimer)
     TextView txtTimer;
+    @BindView(R.id.fragment_present_webView)
+    WebView webView;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -79,9 +91,9 @@ public class ImagePresentationFragment extends Fragment {
     @BindString(R.string.feed_request_error)
     String errorFeedRequestFailed;
     @BindString(R.string.progress_getting_user_info)
-    String progressGettingUserInfo;
-    @BindString(R.string.progress_getting_feed_data)
     String progressGettingFeedData;
+    @BindString(R.string.progress_getting_feed_data)
+    String progressGettingPosts;
     @BindString(R.string.progress_done)
     String progressDone;
     @BindString(R.string.pref_instagram_source)
@@ -147,8 +159,11 @@ public class ImagePresentationFragment extends Fragment {
     private boolean isDescriptionDisplayed;
     private boolean isProfilePicDisplayed;
     private boolean isUsernameDisplayed;
-
-    private long rootContainerLastClickTime = -1;
+    private ScrollableWebScraper scrollableWebScraper;
+    private Set<InstagramPostElement> postElementSet;
+    private InstagramPost[] instagramPosts;
+    private int successRequestCount;
+    private int failedRequestCount;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -164,14 +179,12 @@ public class ImagePresentationFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View fragmentRootView = inflater.inflate(R.layout.fragment_image_presentation, container, false);
+        View fragmentRootView = inflater.inflate(R.layout.fragment_image_slide, container, false);
         ButterKnife.bind(this, fragmentRootView);
 
-        String serverInfo = getArguments().getString("serverInfo");
-        txtServerInfo.setText(serverInfo);
+        webView.getSettings().setLoadsImagesAutomatically(false);
 
-        fragmentRootView.setOnClickListener(rootContainerClickListener);
-
+        setServerInfo();
         getPreferences();
         initComponentsSize();
         showWatermark();
@@ -184,27 +197,24 @@ public class ImagePresentationFragment extends Fragment {
             txtError.setVisibility(View.VISIBLE);
             txtError.setText(errorSourceUrlNotSet);
         } else {
+            postElementSet = new LinkedHashSet<>();
+            instagramPosts = new InstagramPost[numberOfPostsToDisplay];
             // Else, get user's id from source URL
             txtError.setVisibility(View.GONE);
 
-            txtProgress.setText(progressGettingUserInfo);
+            txtProgress.setText(progressGettingFeedData);
             progressBar.setProgress(0);
+            progressBar.setMax(1 + numberOfPostsToDisplay);
+
             txtProgress.setVisibility(View.VISIBLE);
             progressBar.setVisibility(View.VISIBLE);
 
-            String userInfoRequestUrl = InstagramUtil.constructInstagramUserInfoUrl(instagramSourceUrl);
+            // Start scraper to get posts of user
+            scrollableWebScraper = new ScrollableWebScraper(webView, instagramSourceUrl);
+            scrollableWebScraper.setHtmlExtractionListener(this);
 
-            // Add request to get user info to queue
-//            requestQueue.add(new StringRequest(
-//                    userInfoRequestUrl,
-//                    userInfoResponseSuccessListener,
-//                    userInfoResponseErrorListener
-//            ));
-
-            requestQueue.add(new StringRequest(
-                    instagramSourceUrl + "?__a=1",
-                    feedResponseSuccessListenter,
-                    feedResponseErrorListener));
+            getUserInfo();
+            scrollableWebScraper.start();
 
             startConfigServerMsgTimer();
         }
@@ -212,123 +222,154 @@ public class ImagePresentationFragment extends Fragment {
         return fragmentRootView;
     }
 
-    // Double click listener
-    private View.OnClickListener rootContainerClickListener = view -> {
-        if (rootContainerLastClickTime != -1 &&
-                System.currentTimeMillis() - rootContainerLastClickTime < 200) {
+    private void getUserInfo() {
+        String url = InstagramUtil.constructInstagramUserInfoUrl(instagramSourceUrl);
 
-            getActivity()
-                    .getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(MainActivity.FRAGMENT_CONTAINER_ID, new SettingsFragment())
-                    .addToBackStack(null)
-                    .commit();
-        }
+        requestQueue.add(new StringRequest(url,
+                response -> {
+                    JsonObject userInfo = jsonParser.parse(response)
+                            .getAsJsonObject().get("graphql")
+                            .getAsJsonObject().get("user")
+                            .getAsJsonObject();
 
-        rootContainerLastClickTime = System.currentTimeMillis();
-    };
+                    txtUsername.setText(userInfo.get("username").getAsString());
 
-//    private Response.Listener<String> userInfoResponseSuccessListener = new Response.Listener<String>() {
-//        @Override
-//        public void onResponse(String response) {
-//            txtError.setVisibility(View.GONE);
-//
-//            String userInfoString = jsonParser.parse(response)
-//                    .getAsJsonObject().get("graphql")
-//                    .getAsJsonObject().get("user")
-//                    .toString();
-//
-//            InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
-//
-//            txtUsername.setText(user.getFullName());
-//            Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
-//
-//            // After getting user's id, create feed data request URL and send request
-//            String feedRequestUrl = InstagramUtil.contructFeedRequestUrl(user.getId());
-//
-//            txtProgress.setText(progressGettingFeedData);
-//            progressBar.setProgress(1);
-//
-//            requestQueue.add(new StringRequest(
-//                    feedRequestUrl,
-//                    feedResponseSuccessListenter,
-//                    feedResponseErrorListener));
-//        }
-//    };
-
-    private Response.ErrorListener userInfoResponseErrorListener = new Response.ErrorListener() {
-        @Override
-        public void onErrorResponse(VolleyError error) {
-            txtError.setVisibility(View.VISIBLE);
-            txtError.setText(errorInvalidSourceUrl);
-        }
-    };
-
-    private Response.Listener<String> feedResponseSuccessListenter = new Response.Listener<String>() {
-        @Override
-        public void onResponse(String response) {
-            txtError.setVisibility(View.GONE);
-
-            // Get the nested object as String inside the original response
-//            String instagramFeedDataString = jsonParser.parse(response)
-//                    .getAsJsonObject().get("data")
-//                    .getAsJsonObject().get("user")
-//                    .getAsJsonObject().get("edge_owner_to_timeline_media")
-//                    .getAsJsonObject().toString();
-
-            try {
-                String userInfoString = jsonParser.parse(response)
-                        .getAsJsonObject().get("graphql")
-                        .getAsJsonObject().get("user")
-                        .toString();
-
-                InstagramUser user = gson.fromJson(userInfoString, InstagramUser.class);
-
-                txtUsername.setText(user.getFullName());
-                Picasso.get().load(user.getProfilePicUrl()).into(imgProfile);
-
-                String instagramFeedDataString = jsonParser.parse(response)
-                        .getAsJsonObject().get("graphql")
-                        .getAsJsonObject().get("user")
-                        .getAsJsonObject().get("edge_owner_to_timeline_media")
-                        .getAsJsonObject().toString();
-
-                // Extract the image URLs from the retrieved instagram feed data
-                InstagramFeedData instagramFeedData = gson.fromJson(instagramFeedDataString, InstagramFeedData.class);
-                final List<InstagramPost> postsToDisplay = filterPostsToDisplay(instagramFeedData.getPosts());
-
-                txtProgress.setText(progressDone);
-                progressBar.setProgress(2);
-
-                startImagePresentation(postsToDisplay);
-            } catch (JsonSyntaxException e) {
-                // Data retrieved from source URL can't be parsed, it can be due to an invalid URL
-                hideProgress();
-                showWatermark();
-                txtError.setText(sourceUrlError);
-                txtError.setVisibility(View.VISIBLE);
-            }
-        }
-    };
-
-    private Response.ErrorListener feedResponseErrorListener = new Response.ErrorListener() {
-        @Override
-        public void onErrorResponse(VolleyError error) {
-            txtError.setVisibility(View.VISIBLE);
-            txtError.setText(errorFeedRequestFailed);
-            showWatermark();
-        }
-    };
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        requestQueue.cancelAll(request -> true);
-        handler.removeCallbacks(imagePresentationLoader);
+                    Picasso.get()
+                            .load(userInfo.get("profile_pic_url_hd").getAsString())
+                            .fit()
+                            .centerCrop()
+                            .into(imgProfile);
+                }, error -> Log.e("Error", error.toString())));
     }
 
-    private void startImagePresentation(final List<InstagramPost> posts) {
+    @Override
+    public void onHtmlExtracted(String html) {
+        Document document = Jsoup.parse(html);
+        Elements elements = document.select("article a");
+
+        // Create a Set of Element to avoid duplication, stop when post limit is reached
+        for (Element element : elements) {
+            InstagramPostElement postElement = new InstagramPostElement(element);
+            postElementSet.add(postElement);
+        }
+
+        txtProgress.setText(String.format(Locale.ENGLISH, "Found %d posts", postElementSet.size()));
+        if (postElementSet.size() < numberOfPostsToDisplay) {
+            scrollableWebScraper.scrollToBottom();
+            return;
+        }
+
+        List<Element> htmlElements = new ArrayList<>();
+        for (InstagramPostElement postElement : postElementSet) {
+            htmlElements.add(postElement.getElement());
+        }
+
+        txtProgress.setText(progressGettingPosts);
+        progressBar.setProgress(1);
+        successRequestCount = 0;
+        failedRequestCount = 0;
+        for (int i = 0; i < numberOfPostsToDisplay; i++) {
+            Element htmlElement = htmlElements.get(i);
+            final int index = i;
+
+            requestQueue.add(new StringRequest("https://instagram.com" + htmlElement.attr("href"),
+                    // Success listener
+                    instagramPostHtml -> {
+                        Document doc = Jsoup.parse(instagramPostHtml);
+                        String dataScript = doc.select("body > script:containsData(_sharedData =)").html();
+
+                        if (dataScript.isEmpty()) {
+                            dataScript = doc.select("body > script").get(0).html();
+                        }
+
+                        String jsonString = dataScript.split("_sharedData =")[1].trim();
+                        if (jsonString.endsWith(";")) {
+                            jsonString = jsonString.substring(0, jsonString.length() - 1);
+                        }
+
+                        JsonObject postInfo = jsonParser.parse(jsonString)
+                                .getAsJsonObject().get("entry_data")
+                                .getAsJsonObject().get("PostPage")
+                                .getAsJsonArray().get(0)
+                                .getAsJsonObject().get("graphql")
+                                .getAsJsonObject().get("shortcode_media")
+                                .getAsJsonObject();
+
+                        //Get likes
+                        int likes = postInfo.get("edge_media_preview_like")
+                                .getAsJsonObject().get("count")
+                                .getAsInt();
+
+                        //Get comments
+                        int comments = postInfo.get("edge_media_preview_comment") != null
+                                ? postInfo.get("edge_media_preview_comment")
+                                .getAsJsonObject().get("count")
+                                .getAsInt()
+                                : postInfo.get("edge_media_to_comment")
+                                .getAsJsonObject().get("count")
+                                .getAsInt();
+
+                        //Get caption
+                        String caption;
+                        try {
+                            caption = postInfo.get("edge_media_to_caption")
+                                    .getAsJsonObject().get("edges")
+                                    .getAsJsonArray().get(0)
+                                    .getAsJsonObject().get("node")
+                                    .getAsJsonObject().get("text")
+                                    .getAsString();
+                        } catch (IndexOutOfBoundsException | NullPointerException e) {
+                            caption = null;
+                        }
+
+                        //Get imgSrcSet, this is the set of images used for different screen sizes
+                        JsonArray imgSrcSet = jsonParser.parse(jsonString)
+                                .getAsJsonObject().get("entry_data")
+                                .getAsJsonObject().get("PostPage")
+                                .getAsJsonArray().get(0)
+                                .getAsJsonObject().get("graphql")
+                                .getAsJsonObject().get("shortcode_media")
+
+                                .getAsJsonObject().get("display_resources")
+                                .getAsJsonArray();
+
+                        //Get imgUrl - image with the highest resolution (last img in srcSet)
+                        String imgSrc = imgSrcSet.get(imgSrcSet.size() - 1)
+                                .getAsJsonObject().get("src")
+                                .getAsString();
+
+                        instagramPosts[index] = new InstagramPost(likes, comments, caption, imgSrc);
+                        onInstagramPostRequestDone(true);
+                    },
+                    // Error listener
+                    error -> {
+                        instagramPosts[index] = null;
+                        onInstagramPostRequestDone(false);
+                    }));
+        }
+    }
+
+    private void onInstagramPostRequestDone(boolean requestSuccess) {
+        if (requestSuccess) {
+            successRequestCount++;
+        } else {
+            failedRequestCount++;
+        }
+
+        int totalRequestCount = successRequestCount + failedRequestCount;
+
+        progressBar.setProgress(1 + totalRequestCount);
+        txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts",
+                totalRequestCount, numberOfPostsToDisplay));
+
+        if (failedRequestCount == numberOfPostsToDisplay) {
+            // TODO: Handle error - all requests failed -> no posts were retrieved
+        } else if (totalRequestCount == numberOfPostsToDisplay) {
+            startImagePresentation(instagramPosts);
+        }
+    }
+
+    private void startImagePresentation(InstagramPost[] instagramPosts) {
         if (imagePresentationLoader != null) {
             handler.removeCallbacks(imagePresentationLoader);
         }
@@ -338,24 +379,29 @@ public class ImagePresentationFragment extends Fragment {
 
             @Override
             public void run() {
-                if (index >= posts.size()) {
+                if (index >= instagramPosts.length) {
                     index = 0;
                 }
 
-                InstagramPost post = posts.get(index++);
+                InstagramPost post = null;
+
+                while (post == null) {
+                    post = instagramPosts[index++];
+                }
+
                 Picasso.get()
-                        .load(post.getDisplayUrl())
+                        .load(post.getImgUrl())
                         .fit()
                         .centerCrop()
                         .into(imgMain);
 
                 DecimalFormat numberFormatter = new DecimalFormat("#,###");
-                String noOfLikes = numberFormatter.format(post.getNumberOfLikes()) + " likes";
-                String noOfComments = numberFormatter.format(post.getNumberOfComments()) + " comments";
+                String noOfLikes = numberFormatter.format(post.getLikesCount()) + " likes";
+                String noOfComments = numberFormatter.format(post.getCommentsCount()) + " comments";
 
                 txtNumberOfLikes.setText(noOfLikes);
                 txtNumberOfComments.setText(noOfComments);
-                txtPostDescription.setText(post.getPostDescription());
+                txtPostDescription.setText(post.getCaption());
 
                 showComponents();
                 hideProgress();
@@ -371,40 +417,6 @@ public class ImagePresentationFragment extends Fragment {
         progressBar.setVisibility(View.GONE);
         txtProgress.setVisibility(View.GONE);
         progressBar.setProgress(0);
-    }
-
-    private List<InstagramPost> filterPostsToDisplay(List<InstagramPost> posts) {
-        List<InstagramPost> postsToDisplay = new ArrayList<>();
-
-        for (InstagramPost post : posts) {
-            boolean shouldBeAdded = true;
-
-            // Check type: currently only get images and skip videos
-            if (!post.getType().equalsIgnoreCase(Constants.INSTAGRAM_IMAGE_TYPE_NAME)) {
-                continue;
-            }
-
-            // Check with excluded hashtags
-            if (excludedHashtags != null) {
-                for (String excludedHashtag : excludedHashtags) {
-                    if (post.getPostDescription().toLowerCase().contains(excludedHashtag.toLowerCase())) {
-                        shouldBeAdded = false;
-                        break;
-                    }
-                }
-            }
-
-            if (shouldBeAdded) {
-                postsToDisplay.add(post);
-            }
-
-            // Check maximum number of posts
-            if (postsToDisplay.size() == numberOfPostsToDisplay) {
-                break;
-            }
-        }
-
-        return postsToDisplay;
     }
 
     private void hideComponents() {
@@ -474,8 +486,8 @@ public class ImagePresentationFragment extends Fragment {
         profilePicWidth = getIntValueFromPref(profilePicWidthPrefKey, Constants.DEFAULT_PROFILE_PIC_WIDTH);
         profilePicHeight = getIntValueFromPref(profilePicHeightPrefKey, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
         usernameTextSize = getIntValueFromPref(usernameTextSizePrefKey, Constants.DEFAULT_USERNAME_TEXT_SIZE);
-        imgMainWidth = getIntValueFromPref(imgMainWidthPrefKey, 0); //Width is initialized as screen's width in MainActivity
-        imgMainHeight = getIntValueFromPref(imgMainHeightPrefKey, 0); //Height is initialized as 3/4 of screen's width in MainActivity
+        imgMainWidth = getIntValueFromPref(imgMainWidthPrefKey, 0); //Width is initialized as screen's width
+        imgMainHeight = getIntValueFromPref(imgMainHeightPrefKey, 0); //Height is initialized as 3/4 of screen's width
         likeTextSize = getIntValueFromPref(likeTextSizePrefKey, Constants.DEFAULT_LIKE_TEXT_SIZE);
         commentTextSize = getIntValueFromPref(commentTextSizePrefKey, Constants.DEFAULT_COMMENT_TEXT_SIZE);
         descriptionTextSize = getIntValueFromPref(descriptionTextSizePrefKey, Constants.DEFAULT_DESCRIPTION_TEXT_SIZE);
@@ -522,6 +534,62 @@ public class ImagePresentationFragment extends Fragment {
             };
 
             countDownTimer.start();
+        }
+    }
+
+    private void setServerInfo() {
+        WifiManager wifiManager = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiInfo info = wifiManager.getConnectionInfo();
+        int ipAddress = info.getIpAddress();
+        String ssid = info.getSSID();
+        final String formatedIpAddress = String.format(Locale.ENGLISH, "%d.%d.%d.%d",
+                (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
+                (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
+
+        String serverStatus = "Status: Online | ";
+        String wifiSsid = String.format(Locale.ENGLISH, "Connected WiFi SSID: %s%n", ssid);
+        String configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d", formatedIpAddress, Constants.WEB_SERVER_PORT);
+        String serverInfo = serverStatus + wifiSsid + configServerIp;
+        txtServerInfo.setText(serverInfo);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        handler.removeCallbacks(imagePresentationLoader);
+    }
+
+    /**
+     * Wrapper class for Jsoup Element, this is used for storing Instagram posts in a LinkedHashSet
+     * <p>
+     * While scraping data from Instagram with WebView, the max number of posts in HTML document at
+     * any time is 45 -> need to store the posts if user needs more than 45 posts, LinkedHashSet is used
+     * for storing the posts without duplication. the post href is used as the hashCode
+     */
+    private class InstagramPostElement {
+        private Element element;
+        private String href;
+
+        InstagramPostElement(Element element) {
+            this.element = element;
+            href = element.attr("href");
+        }
+
+        public Element getElement() {
+            return element;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            InstagramPostElement that = (InstagramPostElement) o;
+            return Objects.equals(this.href, that.href);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(href);
         }
     }
 }
