@@ -26,7 +26,7 @@ public class PreferenceController {
     private String postNoPrefKey;
     private String isLikesDisplayedPrefKey;
     private String isCommentsDisplayedPrefKey;
-    private String isPostDescriptionDisplayedPrefKey;
+    private String isPostCaptionDisplayedPrefKey;
     private String isProfilePicDisplayedPrefKey;
     private String isUsernameDisplayPrefKey;
     private String excludedHashtagsPrefKey;
@@ -37,7 +37,7 @@ public class PreferenceController {
     private String usernameTextSizePrefKey;
     private String likeTextSizePrefKey;
     private String commentTextSizePrefKey;
-    private String descriptionTextSizePrefKey;
+    private String captionTextSizePrefKey;
     private String presentIntervalPrefKey;
 
     public PreferenceController(Context context) {
@@ -54,7 +54,7 @@ public class PreferenceController {
         int numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
         boolean isLikesDisplayed = sharedPreferences.getBoolean(isLikesDisplayedPrefKey, true);
         boolean isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
-        boolean isDescriptionDisplayed = sharedPreferences.getBoolean(isPostDescriptionDisplayedPrefKey, true);
+        boolean isCaptionDisplayed = sharedPreferences.getBoolean(isPostCaptionDisplayedPrefKey, true);
         boolean isProfilePicDisplayed = sharedPreferences.getBoolean(isProfilePicDisplayedPrefKey, true);
         boolean isUsernameDisplayed = sharedPreferences.getBoolean(isUsernameDisplayPrefKey, true);
         String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, null);
@@ -67,7 +67,7 @@ public class PreferenceController {
         int imgMainHeight = getIntValueFromPref(imgMainHeightPrefKey, 0); //Height is initialized as 3/4 of screen's width in MainActivity
         int likeTextSize = getIntValueFromPref(likeTextSizePrefKey, Constants.DEFAULT_LIKE_TEXT_SIZE);
         int commentTextSize = getIntValueFromPref(commentTextSizePrefKey, Constants.DEFAULT_COMMENT_TEXT_SIZE);
-        int descriptionTextSize = getIntValueFromPref(descriptionTextSizePrefKey, Constants.DEFAULT_DESCRIPTION_TEXT_SIZE);
+        int captionTextSize = getIntValueFromPref(captionTextSizePrefKey, Constants.DEFAULT_CAPTION_TEXT_SIZE);
         int presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL);
 
         AppPreference appPreference = AppPreference.builder()
@@ -76,7 +76,7 @@ public class PreferenceController {
                 .excludedHashtags(excludedHashtagsString)
                 .isLikesDisplayed(isLikesDisplayed)
                 .isCommentsDisplayed(isCommentsDisplayed)
-                .isDescriptionDisplayed(isDescriptionDisplayed)
+                .isCaptionDisplayed(isCaptionDisplayed)
                 .isProfilePicDisplayed(isProfilePicDisplayed)
                 .isUsernameDisplayed(isUsernameDisplayed)
                 //Size variables
@@ -87,7 +87,7 @@ public class PreferenceController {
                 .imgMainHeight(imgMainHeight)
                 .likeTextSize(likeTextSize)
                 .commentTextSize(commentTextSize)
-                .descriptionTextSize(descriptionTextSize)
+                .captionTextSize(captionTextSize)
                 .presentInterval(presentInterval)
                 .build();
 
@@ -111,7 +111,7 @@ public class PreferenceController {
         prefEditor.putString(excludedHashtagsPrefKey, appPreference.getExcludedHashtags());
         prefEditor.putBoolean(isLikesDisplayedPrefKey, appPreference.isLikesDisplayed());
         prefEditor.putBoolean(isCommentsDisplayedPrefKey, appPreference.isCommentsDisplayed());
-        prefEditor.putBoolean(isPostDescriptionDisplayedPrefKey, appPreference.isDescriptionDisplayed());
+        prefEditor.putBoolean(isPostCaptionDisplayedPrefKey, appPreference.isCaptionDisplayed());
         prefEditor.putBoolean(isProfilePicDisplayedPrefKey, appPreference.isProfilePicDisplayed());
         prefEditor.putBoolean(isUsernameDisplayPrefKey, appPreference.isUsernameDisplayed());
         // Size prefs
@@ -122,7 +122,7 @@ public class PreferenceController {
         prefEditor.putString(usernameTextSizePrefKey, String.valueOf(appPreference.getUsernameTextSize()));
         prefEditor.putString(likeTextSizePrefKey, String.valueOf(appPreference.getLikeTextSize()));
         prefEditor.putString(commentTextSizePrefKey, String.valueOf(appPreference.getCommentTextSize()));
-        prefEditor.putString(descriptionTextSizePrefKey, String.valueOf(appPreference.getDescriptionTextSize()));
+        prefEditor.putString(captionTextSizePrefKey, String.valueOf(appPreference.getCaptionTextSize()));
         prefEditor.putString(presentIntervalPrefKey, String.valueOf(appPreference.getPresentInterval()));
 
         prefEditor.apply();
@@ -138,7 +138,7 @@ public class PreferenceController {
         postNoPrefKey = context.getResources().getString(R.string.pref_post_no);
         isLikesDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_likes_displayed);
         isCommentsDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_comments_displayed);
-        isPostDescriptionDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_description_displayed);
+        isPostCaptionDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_caption_displayed);
         isProfilePicDisplayedPrefKey = context.getResources().getString(R.string.pref_is_profile_pic_displayed);
         isUsernameDisplayPrefKey = context.getResources().getString(R.string.pref_is_username_displayed);
         excludedHashtagsPrefKey = context.getResources().getString(R.string.pref_excluded_hashtags);
@@ -150,7 +150,7 @@ public class PreferenceController {
         usernameTextSizePrefKey = context.getResources().getString(R.string.pref_username_text_size);
         likeTextSizePrefKey = context.getResources().getString(R.string.pref_like_text_size);
         commentTextSizePrefKey = context.getResources().getString(R.string.pref_comment_text_size);
-        descriptionTextSizePrefKey = context.getResources().getString(R.string.pref_description_text_size);
+        captionTextSizePrefKey = context.getResources().getString(R.string.pref_caption_text_size);
         presentIntervalPrefKey = context.getResources().getString(R.string.pref_present_interval);
     }
 

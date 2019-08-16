@@ -105,7 +105,7 @@ public class WebServerRouter {
                 }
                 break;
             case "/api/v1/license/is-validated":
-                if (NanoHTTPD.Method.POST.equals(requestMethod)) {
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
                     response = licenseController.isDeviceValidated();
                 }
                 break;

@@ -14,7 +14,7 @@ public class AppPreference {
     private boolean isUsernameDisplayed;
     private boolean isLikesDisplayed;
     private boolean isCommentsDisplayed;
-    private boolean isDescriptionDisplayed;
+    private boolean isCaptionDisplayed;
 
     // Size variables
     private int profilePicWidth;
@@ -24,6 +24,6 @@ public class AppPreference {
     private int imgMainHeight;
     private int likeTextSize;
     private int commentTextSize;
-    private int descriptionTextSize;
+    private int captionTextSize;
     private int presentInterval;
 }

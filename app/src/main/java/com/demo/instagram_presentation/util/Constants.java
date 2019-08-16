@@ -1,14 +1,8 @@
 package com.demo.instagram_presentation.util;
 
 public class Constants {
-    //Instagram URL constants
-    public static final String INSTAGRAM_QUERY_ID = "f2405b236d85e8296cf30347c9f08c2a";
-    //    public static final String INSTAGRAM_API_URL_FORMAT =
-//            "https://instagram.com/graphql/query/?query_hash=%s&variables={\"id\":\"%s\",\"first\":100,\"after\":null}";
-    public static final String INSTAGRAM_API_URL_FORMAT = "https://instagram.com/%s/?__a=1";
-    public static final String INSTAGRAM_IMAGE_TYPE_NAME = "GraphImage";
-
     //Config constants
+    public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000;
     public static final int DEFAULT_PRESENTATION_INTERVAL = 10000;
     public static final int DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY = 5;
     //Size constants
@@ -17,7 +11,7 @@ public class Constants {
     public static final int DEFAULT_USERNAME_TEXT_SIZE = 40;
     public static final int DEFAULT_LIKE_TEXT_SIZE = 30;
     public static final int DEFAULT_COMMENT_TEXT_SIZE = 30;
-    public static final int DEFAULT_DESCRIPTION_TEXT_SIZE = 30;
+    public static final int DEFAULT_CAPTION_TEXT_SIZE = 30;
 
     //Web server configs
     public static final int WEB_SERVER_PORT = 8888;
@@ -39,4 +33,7 @@ public class Constants {
     //View visibility hiding/showing
     public static final int HIDE_SERVER_INFO_ON_WIFI_DELAY = 120 * 1000; //in ms
     public static final int HIDE_SERVER_INFO_ON_WIFI_DIRECT_DELAY = 300 * 1000; //in ms
+
+    //Network configs
+    public static final int MAX_FEED_REQUEST_ATTEMPT = 3;
 }

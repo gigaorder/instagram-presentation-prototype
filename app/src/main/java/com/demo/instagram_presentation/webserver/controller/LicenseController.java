@@ -6,6 +6,9 @@ import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.webserver.model.LicenseKeyInfo;
 import com.google.gson.Gson;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import fi.iki.elonen.NanoHTTPD;
 
 public class LicenseController {
@@ -39,6 +42,9 @@ public class LicenseController {
     }
 
     public NanoHTTPD.Response isDeviceValidated() {
-        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "text/plain", String.valueOf(LicenseUtil.validateKeyFiles()));
+        Map<String, Boolean> returnedDataMap = new HashMap<>();
+        returnedDataMap.put("validated", LicenseUtil.validateKeyFiles());
+
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(returnedDataMap));
     }
 }

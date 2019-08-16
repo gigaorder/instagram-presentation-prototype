@@ -4,7 +4,7 @@
     <!--Messages-->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="source_url_not_set">Instagram source URL is not set, please go to config web server to set it first</string>
-    <string name="invalid_source_url">Invalid Instagram user URL, please specify a valid URL</string>
+    <string name="invalid_source_url">Invalid Instagram user URL, please specify a valid URL\nApp will restart when source URL is changed on config website</string>
     <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram, make sure the URL is valid</string>
     <string name="exit">Exit</string>
     <string name="go_back_to_main_screen">Go back to main screen</string>
@@ -15,8 +15,9 @@
     <string name="getting_p2p_info">Getting Wi-Fi Direct info…</string>
     <string name="wifi_detected">"Wifi detected, app will restart after 10 seconds"</string>
 
+    <string name="timer_msg_server">This message will disappear in %d seconds</string>
+    <string name="timer_msg_retry">Can not get Instagram feed info\nRetrying in %d seconds</string>
     <string name="progress_getting_user_info">Getting data from user\'s Instagram feed</string>
-    <string name="progress_getting_feed_data">Retrieving Instagram posts</string>
     <string name="progress_done">All done!</string>
 
     <!--Preferences keys, summaries and titles-->
@@ -27,7 +28,7 @@
     <string name="pref_is_username_displayed">is_username_displayed</string>
     <string name="pref_is_post_likes_displayed">is_post_likes_displayed</string>
     <string name="pref_is_post_comments_displayed">is_post_comments_displayed</string>
-    <string name="pref_is_post_description_displayed">is_post_description_displayed</string>
+    <string name="pref_is_post_caption_displayed">is_post_caption_displayed</string>
     <string name="pref_back_button">back_button</string>
     <string name="pref_instagram_source_summary">Must be a valid Instagram URL</string>
     <string name="pref_instagram_source_title">Instagram source URL</string>
@@ -41,7 +42,7 @@
     <string name="pref_is_username_displayed_title">Username</string>
     <string name="pref_is_post_likes_displayed_title">Post likes</string>
     <string name="pref_is_post_comments_displayed_title">Post comments</string>
-    <string name="pref_is_post_description_displayed_title">Post Description</string>
+    <string name="pref_is_post_caption_displayed_title">Post Caption</string>
     <string name="pref_category_size_title">Size configurations</string>
     <string name="pref_img_main_width">main_img_width</string>
     <string name="pref_img_main_height">main_img_height</string>
@@ -54,7 +55,7 @@
     <string name="pref_username_text_size">username_text_size</string>
     <string name="pref_like_text_size">like_text_size</string>
     <string name="pref_comment_text_size">comment_text_size</string>
-    <string name="pref_description_text_size">description_text_size</string>
+    <string name="pref_caption_text_size">caption_text_size</string>
     <string name="pref_present_interval">present_interval</string>
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
