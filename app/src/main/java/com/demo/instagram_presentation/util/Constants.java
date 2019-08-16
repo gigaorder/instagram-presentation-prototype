@@ -36,4 +36,10 @@ public class Constants {
 
     //Network configs
     public static final int MAX_FEED_REQUEST_ATTEMPT = 3;
+
+    //webView scraper configs
+    public static final int FIRST_SCROLL_DELAY = 1000; //ms
+    public static final int NEXT_SCROLLS_DELAY = 5 * 1000; //ms
+    public static final int SCROLL_TIMEOUT = 60 * 1000; //ms
+    public static final int SCROLL_COUNT_LIMIT = SCROLL_TIMEOUT / NEXT_SCROLLS_DELAY;
 }

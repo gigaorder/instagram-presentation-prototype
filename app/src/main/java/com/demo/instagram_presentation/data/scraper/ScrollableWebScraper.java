@@ -24,19 +24,7 @@ public class ScrollableWebScraper {
 
     public void start() {
         webView.getSettings().setJavaScriptEnabled(true);
-        webView.loadUrl(urlToScrape);
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-
-                if (!scrollStarted) {
-                    scrollToBottom();
-                    scrollStarted = true;
-                }
-            }
-        });
+        loadUrl(urlToScrape);
     }
 
     public void setHtmlExtractionListener(HtmlExtractionListener htmlExtractionListener) {
@@ -53,6 +41,26 @@ public class ScrollableWebScraper {
                         htmlExtractionListener.onHtmlExtracted(html);
                     }
                 });
+    }
+
+    public void loadUrl(String url) {
+        webView.loadUrl(urlToScrape);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+
+                if (!scrollStarted) {
+                    scrollToBottom();
+                    scrollStarted = true;
+                }
+            }
+        });
+    }
+
+    public void setScrollStarted(boolean scrollStarted) {
+        this.scrollStarted = scrollStarted;
     }
 
     public void scrollToBottomWithDelay(int ms) {

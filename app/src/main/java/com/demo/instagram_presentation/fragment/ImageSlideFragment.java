@@ -29,7 +29,6 @@ import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -163,7 +162,6 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
     private ScrollableWebScraper scrollableWebScraper;
     private Set<InstagramPostElement> postElementSet;
     private List<InstagramPost> instagramPosts;
-    private int successRequestCount;
     private int failedRequestCount;
     private boolean maxNumberOfPostsReached;
     private boolean slideStarted;
@@ -171,6 +169,18 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
     private int postIndex;
     private int startPostIndex;
     private ScrollableWebScraper.HtmlExtractionListener thisFragment;
+
+    /**
+     * The number of posts user's Instagram feed has
+     */
+    private int feedMaxNumberOfPosts;
+
+    /**
+     * Count the number of times the webView scrolls but no new content is found
+     * -> it can be due to network error or the webView has scrolled to the end
+     * If the count exceeds a limit -> stop scrolling (scroll timeout)
+     */
+    private int scrollCount;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -212,9 +222,8 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                             success -> {
                                 postElementSet = new LinkedHashSet<>();
                                 instagramPosts = new ArrayList<>();
-                                // Else, get user's id from source URL
-                                txtError.setVisibility(View.GONE);
 
+                                txtError.setVisibility(View.GONE);
                                 txtProgress.setText(progressGettingFeedData);
                                 progressBar.setProgress(0);
                                 progressBar.setMax(numberOfPostsToDisplay);
@@ -226,8 +235,9 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
 
                                 getUserInfo();
                                 lastNumberOfPosts = 0;
-                                postIndex = 0;
                                 startPostIndex = 0;
+                                scrollCount = 0;
+                                failedRequestCount = 0;
                                 slideStarted = false;
                                 maxNumberOfPostsReached = false;
                                 scrollableWebScraper.start();
@@ -237,6 +247,7 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                                     txtError.setVisibility(View.VISIBLE);
                                     txtError.setText(errorInvalidSourceUrl);
                                 } else {
+                                    // Retry
                                     handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
                                     startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
                                 }
@@ -258,6 +269,10 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                             .getAsJsonObject().get("user")
                             .getAsJsonObject();
 
+                    feedMaxNumberOfPosts = userInfo.get("edge_owner_to_timeline_media")
+                            .getAsJsonObject().get("count")
+                            .getAsInt();
+
                     txtUsername.setText(userInfo.get("username").getAsString());
 
                     Picasso.get()
@@ -274,7 +289,8 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
             progressBar.setVisibility(View.VISIBLE);
         }
 
-        if (maxNumberOfPostsReached) {
+        // If enough posts have been retrieved or if scroll has timed out -> return
+        if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
             return;
         }
 
@@ -290,13 +306,13 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
 
         // If there are new posts, process the HTML document
         if (currentNumberOfPosts > lastNumberOfPosts) {
-            successRequestCount = 0;
-            failedRequestCount = 0;
+            scrollCount = 0;
+            postIndex = 0;
             for (InstagramPostElement postElement : postElementSet) {
+                final int index = postIndex++;
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
                     Element htmlElement = postElement.getElement();
-                    final int index = postIndex++;
 
                     requestQueue.add(new StringRequest("https://instagram.com" + htmlElement.attr("href"),
                             // Success listener
@@ -373,15 +389,17 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                     postElement.setRequested(true);
                 }
             }
+        } else {
+            scrollCount++;
         }
 
         // Wait for the page to be fully loaded the first time -> less delay
         if (currentNumberOfPosts == 0) {
-            scrollableWebScraper.scrollToBottomWithDelay(1000);
+            scrollableWebScraper.scrollToBottomWithDelay(Constants.FIRST_SCROLL_DELAY);
         }
         // Delay to wait for requests to be finished -> avoid requesting redundantly
         else {
-            scrollableWebScraper.scrollToBottomWithDelay(5000);
+            scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
         }
         lastNumberOfPosts = postElementSet.size();
     }
@@ -390,7 +408,6 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
         // If post contains excluded hashtag -> skip
         if (!checkExcludedHashtags(instagramPost.getCaption())) {
             if (requestSuccess) {
-                successRequestCount++;
                 instagramPosts.add(instagramPost);
 
                 if (!maxNumberOfPostsReached) {
@@ -403,7 +420,7 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                 shiftStartPostIndex(instagramPost.getIndex());
             }
 
-            if (instagramPosts.size() >= numberOfPostsToDisplay) {
+            if (instagramPosts.size() >= numberOfPostsToDisplay || instagramPosts.size() >= feedMaxNumberOfPosts) {
                 hideProgress();
                 cleanupWebView();
                 maxNumberOfPostsReached = true;
@@ -674,4 +691,18 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
             return Objects.hash(href);
         }
     }
+
+//    private void startRefreshTaskWithInterval(int interval) {
+//        ScrollableWebScraper.HtmlExtractionListener htmlExtractionListener = html -> {
+//
+//        };
+//
+//        scrollableWebScraper.setScrollStarted(false);
+//        scrollableWebScraper.setHtmlExtractionListener(htmlExtractionListener);
+//        scrollableWebScraper.loadUrl(instagramSourceUrl);
+//
+//        Runnable refreshTask = () -> {
+//
+//        };
+//    }
 }
