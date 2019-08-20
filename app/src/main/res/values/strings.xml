@@ -57,6 +57,7 @@
     <string name="pref_comment_text_size">comment_text_size</string>
     <string name="pref_caption_text_size">caption_text_size</string>
     <string name="pref_present_interval">present_interval</string>
+    <string name="pref_refresh_interval">refresh_interval</string>
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
 </resources>

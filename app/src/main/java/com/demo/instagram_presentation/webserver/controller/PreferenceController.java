@@ -39,6 +39,7 @@ public class PreferenceController {
     private String commentTextSizePrefKey;
     private String captionTextSizePrefKey;
     private String presentIntervalPrefKey;
+    private String refreshIntervalPrefKey;
 
     public PreferenceController(Context context) {
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -68,9 +69,13 @@ public class PreferenceController {
         int likeTextSize = getIntValueFromPref(likeTextSizePrefKey, Constants.DEFAULT_LIKE_TEXT_SIZE);
         int commentTextSize = getIntValueFromPref(commentTextSizePrefKey, Constants.DEFAULT_COMMENT_TEXT_SIZE);
         int captionTextSize = getIntValueFromPref(captionTextSizePrefKey, Constants.DEFAULT_CAPTION_TEXT_SIZE);
+
+        // Slideshow configs
         int presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL);
+        int refreshInterval = getIntValueFromPref(refreshIntervalPrefKey, Constants.DEFAULT_REFRESH_INTERVAL);
 
         AppPreference appPreference = AppPreference.builder()
+                //Data variables
                 .instagramSourceUrl(instagramSourceUrl)
                 .numberOfPostsToDisplay(numberOfPostsToDisplay)
                 .excludedHashtags(excludedHashtagsString)
@@ -88,7 +93,9 @@ public class PreferenceController {
                 .likeTextSize(likeTextSize)
                 .commentTextSize(commentTextSize)
                 .captionTextSize(captionTextSize)
+                //Slideshow variables
                 .presentInterval(presentInterval)
+                .refreshInterval(refreshInterval)
                 .build();
 
         String jsonResponse = gson.toJson(appPreference);
@@ -124,6 +131,7 @@ public class PreferenceController {
         prefEditor.putString(commentTextSizePrefKey, String.valueOf(appPreference.getCommentTextSize()));
         prefEditor.putString(captionTextSizePrefKey, String.valueOf(appPreference.getCaptionTextSize()));
         prefEditor.putString(presentIntervalPrefKey, String.valueOf(appPreference.getPresentInterval()));
+        prefEditor.putString(refreshIntervalPrefKey, String.valueOf(appPreference.getRefreshInterval()));
 
         prefEditor.apply();
 
@@ -152,6 +160,7 @@ public class PreferenceController {
         commentTextSizePrefKey = context.getResources().getString(R.string.pref_comment_text_size);
         captionTextSizePrefKey = context.getResources().getString(R.string.pref_caption_text_size);
         presentIntervalPrefKey = context.getResources().getString(R.string.pref_present_interval);
+        refreshIntervalPrefKey = context.getResources().getString(R.string.pref_refresh_interval);
     }
 
     private int getIntValueFromPref(String key, int defaultValue) {

@@ -10,6 +10,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class LicenseUtil {
+    private LicenseUtil() {
+    }
+
     public static boolean isKeyIdFileInitialized() {
         File file = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
 
@@ -21,11 +24,9 @@ public class LicenseUtil {
 
         int keyId = ThreadLocalRandom.current().nextInt(Constants.BASE_KEY_SEED_MINIMUM_VALUE, Constants.BASE_KEY_SEED_MAXIMUM_VALUE);
 
-        try {
-            FileWriter fileWriter = new FileWriter(licenseFile);
+        try (FileWriter fileWriter = new FileWriter(licenseFile)) {
             fileWriter.append(String.valueOf(keyId));
             fileWriter.flush();
-            fileWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -34,11 +35,10 @@ public class LicenseUtil {
     public static void writeKeyFile(String licenseKey) {
         File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_KEY_FILENAME);
 
-        try {
-            FileWriter fileWriter = new FileWriter(licenseFile);
+        try (FileWriter fileWriter = new FileWriter(licenseFile)) {
+
             fileWriter.append(licenseKey);
             fileWriter.flush();
-            fileWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -47,11 +47,10 @@ public class LicenseUtil {
     public static int readKeyIdFromFile() {
         File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
 
-        try {
-            FileInputStream fis = new FileInputStream(licenseFile);
+        try (FileInputStream fis = new FileInputStream(licenseFile)) {
+
             byte[] data = new byte[(int) licenseFile.length()];
             fis.read(data);
-            fis.close();
 
             return Integer.parseInt(new String(data, StandardCharsets.UTF_8));
         } catch (IOException e) {
@@ -83,11 +82,9 @@ public class LicenseUtil {
     private static int readKeyFromFile() {
         File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_KEY_FILENAME);
 
-        try {
-            FileInputStream fis = new FileInputStream(licenseFile);
+        try (FileInputStream fis = new FileInputStream(licenseFile)){
             byte[] data = new byte[(int) licenseFile.length()];
             fis.read(data);
-            fis.close();
 
             return Integer.parseInt(new String(data, StandardCharsets.UTF_8));
         } catch (IOException e) {

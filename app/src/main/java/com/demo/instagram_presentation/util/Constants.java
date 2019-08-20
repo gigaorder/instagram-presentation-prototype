@@ -3,7 +3,8 @@ package com.demo.instagram_presentation.util;
 public class Constants {
     //Config constants
     public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000;
-    public static final int DEFAULT_PRESENTATION_INTERVAL = 10000;
+    public static final int DEFAULT_PRESENTATION_INTERVAL = 10 * 1000;
+    public static final int DEFAULT_REFRESH_INTERVAL = 60; // in minutes
     public static final int DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY = 5;
     //Size constants
     public static final int DEFAULT_PROFILE_PIC_WIDTH = 100;
@@ -20,7 +21,6 @@ public class Constants {
 
     //Broadcasts constants
     public static final String PREFERENCE_CHANGED_ACTION = "PREFERENCE_CHANGED";
-    public static final String WIFI_CONNECTED_ACTION = "WIFI_CONNECTED_ACTION";
 
     //License key constants
     public static final int BASE_KEY_SEED_MINIMUM_VALUE = 100;
@@ -33,9 +33,6 @@ public class Constants {
     //View visibility hiding/showing
     public static final int HIDE_SERVER_INFO_ON_WIFI_DELAY = 120 * 1000; //in ms
     public static final int HIDE_SERVER_INFO_ON_WIFI_DIRECT_DELAY = 300 * 1000; //in ms
-
-    //Network configs
-    public static final int MAX_FEED_REQUEST_ATTEMPT = 3;
 
     //webView scraper configs
     public static final int FIRST_SCROLL_DELAY = 1000; //ms

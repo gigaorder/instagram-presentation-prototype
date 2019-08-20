@@ -18,7 +18,6 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.fragment.app.Fragment;
-import androidx.preference.PreferenceManager;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
@@ -26,16 +25,16 @@ import com.android.volley.toolbox.Volley;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.data.scraper.ScrollableWebScraper;
 import com.demo.instagram_presentation.model.InstagramPost;
+import com.demo.instagram_presentation.model.InstagramPostElement;
+import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.squareup.picasso.Picasso;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
@@ -46,15 +45,13 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
 
 import butterknife.BindString;
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import lombok.Data;
 
-public class ImageSlideFragment extends Fragment implements ScrollableWebScraper.HtmlExtractionListener {
+public class ImageSlideFragment extends Fragment {
     @BindView(R.id.fragment_present_imgMain)
     ImageView imgMain;
     @BindView(R.id.fragment_present_txtError)
@@ -128,6 +125,8 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
     String captionTextSizePrefKey;
     @BindString(R.string.pref_present_interval)
     String presentIntervalPrefKey;
+    @BindString(R.string.pref_refresh_interval)
+    String refreshIntervalPrefKey;
     @BindString(R.string.source_url_error)
     String sourceUrlError;
     @BindString(R.string.timer_msg_server)
@@ -154,6 +153,7 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
     private int commentTextSize;
     private int captionTextSize;
     private int presentInterval;
+    private int refreshInterval;
     private boolean isLikesDisplayed;
     private boolean isCommentsDisplayed;
     private boolean isCaptionDisplayed;
@@ -162,13 +162,12 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
     private ScrollableWebScraper scrollableWebScraper;
     private Set<InstagramPostElement> postElementSet;
     private List<InstagramPost> instagramPosts;
-    private int failedRequestCount;
+    private List<InstagramPost> newInstagramPosts;
     private boolean maxNumberOfPostsReached;
     private boolean slideStarted;
     private int lastNumberOfPosts;
-    private int postIndex;
     private int startPostIndex;
-    private ScrollableWebScraper.HtmlExtractionListener thisFragment;
+    private int nextSlideIndex;
 
     /**
      * The number of posts user's Instagram feed has
@@ -188,9 +187,8 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
 
         // Init tools
         requestQueue = Volley.newRequestQueue(getContext());
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         jsonParser = new JsonParser();
-        thisFragment = this;
     }
 
     @Override
@@ -200,7 +198,6 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
         ButterKnife.bind(this, fragmentRootView);
 
         webView.getSettings().setLoadsImagesAutomatically(false);
-
         setServerInfo();
         startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
         getPreferences();
@@ -220,8 +217,9 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                 public void run() {
                     requestQueue.add(new StringRequest(instagramSourceUrl,
                             success -> {
-                                postElementSet = new LinkedHashSet<>();
                                 instagramPosts = new ArrayList<>();
+                                newInstagramPosts = new ArrayList<>();
+                                nextSlideIndex = 0;
 
                                 txtError.setVisibility(View.GONE);
                                 txtProgress.setText(progressGettingFeedData);
@@ -231,16 +229,22 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
 
                                 // Start scraper to get posts of user
                                 scrollableWebScraper = new ScrollableWebScraper(webView, instagramSourceUrl);
-                                scrollableWebScraper.setHtmlExtractionListener(thisFragment);
+                                scrollableWebScraper.setHtmlExtractionListener(initialHtmlListener);
 
                                 getUserInfo();
-                                lastNumberOfPosts = 0;
-                                startPostIndex = 0;
-                                scrollCount = 0;
-                                failedRequestCount = 0;
-                                slideStarted = false;
-                                maxNumberOfPostsReached = false;
+                                initScraperVariables();
                                 scrollableWebScraper.start();
+
+                                // Refresh task
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        initScraperVariables();
+                                        scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
+                                        scrollableWebScraper.start();
+                                        handler.postDelayed(this, refreshInterval * 60 * 1000); //refreshInterval is in minutes
+                                    }
+                                }, refreshInterval * 60 * 1000);
                             },
                             err -> {
                                 if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
@@ -283,164 +287,52 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
                 }, error -> Log.e("Error", error.toString())));
     }
 
-    @Override
-    public void onHtmlExtracted(String html) {
-        if (progressBar.getVisibility() == View.GONE && !maxNumberOfPostsReached) {
-            progressBar.setVisibility(View.VISIBLE);
-        }
+    private void initScraperVariables() {
+        postElementSet = new LinkedHashSet<>();
+        maxNumberOfPostsReached = false;
+        scrollCount = 0;
+        lastNumberOfPosts = 0;
 
-        // If enough posts have been retrieved or if scroll has timed out -> return
-        if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
+        if (slideStarted) {
+            newInstagramPosts = new ArrayList<>();
+        } else {
+            instagramPosts = new ArrayList<>();
+            startPostIndex = 0;
+        }
+    }
+
+    private void onInstagramPostRequestSuccess(InstagramPost instagramPost) {
+        // If post contains excluded hashtag -> skip
+        if (checkExcludedHashtags(instagramPost.getCaption())) {
+            shiftStartPostIndex(instagramPost.getIndex());
             return;
         }
 
-        Document document = Jsoup.parse(html);
-        Elements elements = document.select("article a");
+        instagramPosts.add(instagramPost);
 
-        // Use a Set of Element to avoid duplication
-        for (Element element : elements) {
-            InstagramPostElement postElement = new InstagramPostElement(element);
-            postElementSet.add(postElement);
-        }
-        int currentNumberOfPosts = postElementSet.size();
-
-        // If there are new posts, process the HTML document
-        if (currentNumberOfPosts > lastNumberOfPosts) {
-            scrollCount = 0;
-            postIndex = 0;
-            for (InstagramPostElement postElement : postElementSet) {
-                final int index = postIndex++;
-                // If the element is requested for info once -> won't be processed
-                if (!postElement.isRequested()) {
-                    Element htmlElement = postElement.getElement();
-
-                    requestQueue.add(new StringRequest("https://instagram.com" + htmlElement.attr("href"),
-                            // Success listener
-                            instagramPostHtml -> {
-                                Document doc = Jsoup.parse(instagramPostHtml);
-                                String dataScript = doc.select("body > script:containsData(_sharedData =)").html();
-
-                                if (dataScript.isEmpty()) {
-                                    dataScript = doc.select("body > script").get(0).html();
-                                }
-
-                                String jsonString = dataScript.split("_sharedData =")[1].trim();
-                                if (jsonString.endsWith(";")) {
-                                    jsonString = jsonString.substring(0, jsonString.length() - 1);
-                                }
-
-                                JsonObject postInfo = jsonParser.parse(jsonString)
-                                        .getAsJsonObject().get("entry_data")
-                                        .getAsJsonObject().get("PostPage")
-                                        .getAsJsonArray().get(0)
-                                        .getAsJsonObject().get("graphql")
-                                        .getAsJsonObject().get("shortcode_media")
-                                        .getAsJsonObject();
-
-                                //Get likes
-                                int likes = postInfo.get("edge_media_preview_like")
-                                        .getAsJsonObject().get("count")
-                                        .getAsInt();
-
-                                //Get comments
-                                int comments = postInfo.get("edge_media_preview_comment") != null
-                                        ? postInfo.get("edge_media_preview_comment")
-                                        .getAsJsonObject().get("count")
-                                        .getAsInt()
-                                        : postInfo.get("edge_media_to_comment")
-                                        .getAsJsonObject().get("count")
-                                        .getAsInt();
-
-                                //Get caption
-                                String caption;
-                                try {
-                                    caption = postInfo.get("edge_media_to_caption")
-                                            .getAsJsonObject().get("edges")
-                                            .getAsJsonArray().get(0)
-                                            .getAsJsonObject().get("node")
-                                            .getAsJsonObject().get("text")
-                                            .getAsString();
-                                } catch (IndexOutOfBoundsException | NullPointerException e) {
-                                    caption = null;
-                                }
-
-                                //Get imgSrcSet, this is the set of images used for different screen sizes
-                                JsonArray imgSrcSet = jsonParser.parse(jsonString)
-                                        .getAsJsonObject().get("entry_data")
-                                        .getAsJsonObject().get("PostPage")
-                                        .getAsJsonArray().get(0)
-                                        .getAsJsonObject().get("graphql")
-                                        .getAsJsonObject().get("shortcode_media")
-                                        .getAsJsonObject().get("display_resources")
-                                        .getAsJsonArray();
-
-                                //Get imgUrl - image with the highest resolution (last img in srcSet)
-                                String imgSrc = imgSrcSet.get(imgSrcSet.size() - 1)
-                                        .getAsJsonObject().get("src")
-                                        .getAsString();
-
-                                InstagramPost post = new InstagramPost(likes, comments, caption, imgSrc, index);
-                                onInstagramPostRequestDone(true, post);
-                            },
-                            // Error listener
-                            error -> onInstagramPostRequestDone(false, null)));
-
-                    //Mark the element as requested -> won't be processed in the next iteration
-                    postElement.setRequested(true);
-                }
-            }
-        } else {
-            scrollCount++;
+        if (maxNumberOfPostsReached) {
+            txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
+            progressBar.setProgress(instagramPosts.size() + 1);
         }
 
-        // Wait for the page to be fully loaded the first time -> less delay
-        if (currentNumberOfPosts == 0) {
-            scrollableWebScraper.scrollToBottomWithDelay(Constants.FIRST_SCROLL_DELAY);
+        if (checkPostLimit(instagramPosts)) {
+            hideProgress();
+            cleanupWebView();
+            maxNumberOfPostsReached = true;
         }
-        // Delay to wait for requests to be finished -> avoid requesting redundantly
-        else {
-            scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
+
+        // Sort posts using the order of the posts in HTML document
+        Collections.sort(instagramPosts);
+
+        // Start the slide when the first image is retrieved
+        if (!slideStarted && !instagramPosts.isEmpty()
+                && ((instagramPosts.get(0).getIndex() == startPostIndex) || maxNumberOfPostsReached)) {
+            startImagePresentation(instagramPosts);
         }
-        lastNumberOfPosts = postElementSet.size();
     }
 
-    private void onInstagramPostRequestDone(boolean requestSuccess, InstagramPost instagramPost) {
-        // If post contains excluded hashtag -> skip
-        if (!checkExcludedHashtags(instagramPost.getCaption())) {
-            if (requestSuccess) {
-                instagramPosts.add(instagramPost);
-
-                if (!maxNumberOfPostsReached) {
-                    txtProgress.setText(String.format(Locale.ENGLISH,
-                            "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
-                    progressBar.setProgress(instagramPosts.size() + 1);
-                }
-            } else {
-                failedRequestCount++;
-                shiftStartPostIndex(instagramPost.getIndex());
-            }
-
-            if (instagramPosts.size() >= numberOfPostsToDisplay || instagramPosts.size() >= feedMaxNumberOfPosts) {
-                hideProgress();
-                cleanupWebView();
-                maxNumberOfPostsReached = true;
-            }
-
-            // Sort posts using the order of the posts in HTML document
-            Collections.sort(instagramPosts);
-
-            // Start the slide when the first image is retrieved
-            if (!slideStarted && ((instagramPosts.get(0).getIndex() == startPostIndex) || maxNumberOfPostsReached)) {
-                startImagePresentation(instagramPosts);
-                slideStarted = true;
-            }
-        } else {
-            shiftStartPostIndex(instagramPost.getIndex());
-        }
-
-        if (failedRequestCount == numberOfPostsToDisplay) {
-            // TODO: Handle error - all requests failed -> no posts were retrieved
-        }
+    private boolean checkPostLimit(List<InstagramPost> posts) {
+        return posts.size() >= numberOfPostsToDisplay || posts.size() >= feedMaxNumberOfPosts;
     }
 
     private void startImagePresentation(List<InstagramPost> instagramPosts) {
@@ -449,15 +341,16 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
         }
 
         imagePresentationLoader = new Runnable() {
-            int index = 0;
-
             @Override
             public void run() {
+                int index = getNextSlideIndex();
+
                 if (index >= numberOfPostsToDisplay || index >= instagramPosts.size()) {
                     index = 0;
                 }
 
-                InstagramPost post = instagramPosts.get(index++);
+                setNextSlideIndex(index + 1);
+                InstagramPost post = instagramPosts.get(index);
 
                 Picasso.get()
                         .load(post.getImgUrl())
@@ -480,6 +373,15 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
         };
 
         handler.post(imagePresentationLoader);
+        slideStarted = true;
+    }
+
+    public int getNextSlideIndex() {
+        return nextSlideIndex++;
+    }
+
+    public void setNextSlideIndex(int nextSlideIndex) {
+        this.nextSlideIndex = nextSlideIndex;
     }
 
     private void hideProgress() {
@@ -559,6 +461,7 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
         commentTextSize = getIntValueFromPref(commentTextSizePrefKey, Constants.DEFAULT_COMMENT_TEXT_SIZE);
         captionTextSize = getIntValueFromPref(captionTextSizePrefKey, Constants.DEFAULT_CAPTION_TEXT_SIZE);
         presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL);
+        refreshInterval = getIntValueFromPref(refreshIntervalPrefKey, Constants.DEFAULT_REFRESH_INTERVAL);
 
         String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, "").toLowerCase();
 
@@ -649,9 +552,7 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
 
     private void cleanupWebView() {
         webView.loadUrl("about:blank");
-        webView.setTag(null);
         webView.clearHistory();
-        webView.removeAllViews();
     }
 
     @Override
@@ -660,49 +561,122 @@ public class ImageSlideFragment extends Fragment implements ScrollableWebScraper
         handler.removeCallbacks(imagePresentationLoader);
     }
 
-    /**
-     * Wrapper class for Jsoup Element, this is used for storing Instagram posts in a LinkedHashSet
-     * <p>
-     * While scraping data from Instagram with WebView, the max number of posts in HTML document at
-     * any time is 45 -> need to store the posts if user needs more than 45 posts, LinkedHashSet is used
-     * for storing the posts without duplication. the post href is used as the hashCode
-     */
-    @Data
-    private class InstagramPostElement {
-        private Element element;
-        private String href;
-        private boolean requested;
-
-        InstagramPostElement(Element element) {
-            this.element = element;
-            href = element.attr("href");
+    private ScrollableWebScraper.HtmlExtractionListener initialHtmlListener = html -> {
+        if (progressBar.getVisibility() == View.GONE && !maxNumberOfPostsReached) {
+            progressBar.setVisibility(View.VISIBLE);
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            InstagramPostElement that = (InstagramPostElement) o;
-            return Objects.equals(this.href, that.href);
+        if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
+            return;
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(href);
+        Elements elements = Jsoup.parse(html).select("article a");
+        // Use a Set of Element to avoid duplication
+        for (Element element : elements) {
+            postElementSet.add(new InstagramPostElement(element));
         }
-    }
 
-//    private void startRefreshTaskWithInterval(int interval) {
-//        ScrollableWebScraper.HtmlExtractionListener htmlExtractionListener = html -> {
-//
-//        };
-//
-//        scrollableWebScraper.setScrollStarted(false);
-//        scrollableWebScraper.setHtmlExtractionListener(htmlExtractionListener);
-//        scrollableWebScraper.loadUrl(instagramSourceUrl);
-//
-//        Runnable refreshTask = () -> {
-//
-//        };
-//    }
+        int currentNumberOfPosts = postElementSet.size();
+        // If there are new posts, process the HTML document
+        if (currentNumberOfPosts > lastNumberOfPosts) {
+            scrollCount = 0;
+            int postIndex = 0;
+            for (InstagramPostElement postElement : postElementSet) {
+                final int index = postIndex++;
+                // If the element is requested for info once -> won't be processed
+                if (!postElement.isRequested()) {
+                    String postHref = postElement.getElement().attr("href");
+
+                    requestQueue.add(new StringRequest("https://instagram.com" + postHref,
+                            // Success listener
+                            instagramPostHtml -> {
+                                //Mark the element as requested -> won't be processed in the next iteration
+                                postElement.setRequested(true);
+                                InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                                onInstagramPostRequestSuccess(post);
+                            },
+                            // Error listener
+                            error -> shiftStartPostIndex(index)));
+                }
+            }
+        } else {
+            scrollCount++;
+        }
+
+        lastNumberOfPosts = postElementSet.size();
+        if (currentNumberOfPosts == 0) {
+            // Wait for the page to be fully loaded the first time -> less delay
+            scrollableWebScraper.scrollToBottomWithDelay(Constants.FIRST_SCROLL_DELAY);
+        } else {
+            // Delay to wait for requests to be finished -> avoid requesting redundantly
+            scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
+        }
+    };
+
+    private ScrollableWebScraper.HtmlExtractionListener refreshHtmlListener = html -> {
+        if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
+            Collections.sort(newInstagramPosts);
+
+            String currentPostHref = instagramPosts.get(nextSlideIndex).getPostHref();
+
+            for (int i = 0; i < newInstagramPosts.size(); i++) {
+                if (currentPostHref.equals(newInstagramPosts.get(i).getPostHref())) {
+                    nextSlideIndex = i;
+                }
+            }
+
+            handler.removeCallbacks(imagePresentationLoader);
+            startImagePresentation(newInstagramPosts);
+
+            instagramPosts = new ArrayList<>();
+            instagramPosts.addAll(newInstagramPosts);
+            cleanupWebView();
+            return;
+        }
+
+        Elements elements = Jsoup.parse(html).select("article a");
+        // Use a Set of Element to avoid duplication
+        for (Element element : elements) {
+            postElementSet.add(new InstagramPostElement(element));
+        }
+
+        int currentNumberOfPosts = postElementSet.size();
+        // If there are new posts, process the HTML document
+        if (currentNumberOfPosts > lastNumberOfPosts) {
+            scrollCount = 0;
+            int postIndex = 0;
+            for (InstagramPostElement postElement : postElementSet) {
+                final int index = postIndex++;
+                // If the element is requested for info once -> won't be processed
+                if (!postElement.isRequested()) {
+                    String postHref = postElement.getElement().attr("href");
+
+                    requestQueue.add(new StringRequest("https://instagram.com" + postHref,
+                            // Success listener
+                            instagramPostHtml -> {
+                                //Mark the element as requested -> won't be processed in the next iteration
+                                postElement.setRequested(true);
+                                InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                                if (!checkExcludedHashtags(post.getCaption())) {
+                                    newInstagramPosts.add(post);
+                                    maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
+                                }
+                            },
+                            // Error listener
+                            null));
+                }
+            }
+        } else {
+            scrollCount++;
+        }
+
+        lastNumberOfPosts = postElementSet.size();
+        if (currentNumberOfPosts == 0) {
+            // Wait for the page to be fully loaded the first time -> less delay
+            scrollableWebScraper.scrollToBottomWithDelay(Constants.FIRST_SCROLL_DELAY);
+        } else {
+            // Delay to wait for requests to be finished -> avoid requesting redundantly
+            scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
+        }
+    };
 }

@@ -25,5 +25,8 @@ public class AppPreference {
     private int likeTextSize;
     private int commentTextSize;
     private int captionTextSize;
+
+    // Slideshow variables
     private int presentInterval;
+    private int refreshInterval;
 }
