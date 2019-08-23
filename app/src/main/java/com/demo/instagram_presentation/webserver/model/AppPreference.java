@@ -8,6 +8,7 @@ import lombok.Data;
 public class AppPreference {
     // Data variables
     private String instagramSourceUrl;
+    private String instagramSourceTags;
     private String excludedHashtags;
     private int numberOfPostsToDisplay;
     private boolean isProfilePicDisplayed;

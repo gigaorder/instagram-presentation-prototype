@@ -17,7 +17,6 @@ import java.util.HashMap;
 import fi.iki.elonen.NanoHTTPD;
 
 public class WebServerRouter {
-    //TODO: refactor code
     private IndexController indexController;
     private PreferenceController preferenceController;
     private WifiController wifiController;

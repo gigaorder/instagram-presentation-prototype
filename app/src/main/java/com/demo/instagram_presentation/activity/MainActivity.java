@@ -32,7 +32,9 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
     @BindString(R.string.pref_instagram_source)
-    String instagramSourcePrefKey;
+    String instagramSourceUrlPrefKey;
+    @BindString(R.string.pref_instagram_source_tags)
+    String instagramSourceTagsPrefKey;
 
     private SharedPreferences sharedPreferences;
     private NanoHttpdWebServer webServer;
@@ -60,7 +62,8 @@ public class MainActivity extends AppCompatActivity {
         ButterKnife.bind(this);
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
-        String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
+        String instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
+        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
 
         // Register Broadcast receivers
         wifiScanResultReceiver = new WifiScanResultReceiver();
@@ -71,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
         startConfigServer();
 
-        if (isWifiConnected() && instagramSourceUrl != null) {
+        if (isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
             ImageSlideFragment imageSlideFragment = new ImageSlideFragment();
 
             getSupportFragmentManager()

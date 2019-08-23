@@ -15,14 +15,13 @@ import com.google.gson.Gson;
 import fi.iki.elonen.NanoHTTPD;
 
 public class PreferenceController {
-    // TODO: refactor code + extract hard-coded pref keys
-
     private SharedPreferences sharedPreferences;
     private Gson gson;
     private Context context;
 
     // Preference keys
     private String instagramSourcePrefKey;
+    private String instagramSourceTagsPrefKey;
     private String postNoPrefKey;
     private String isLikesDisplayedPrefKey;
     private String isCommentsDisplayedPrefKey;
@@ -52,6 +51,7 @@ public class PreferenceController {
     public NanoHTTPD.Response getPreferences() {
         // Data configs
         String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
+        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
         int numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
         boolean isLikesDisplayed = sharedPreferences.getBoolean(isLikesDisplayedPrefKey, true);
         boolean isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
@@ -77,6 +77,7 @@ public class PreferenceController {
         AppPreference appPreference = AppPreference.builder()
                 //Data variables
                 .instagramSourceUrl(instagramSourceUrl)
+                .instagramSourceTags(instagramSourceTags)
                 .numberOfPostsToDisplay(numberOfPostsToDisplay)
                 .excludedHashtags(excludedHashtagsString)
                 .isLikesDisplayed(isLikesDisplayed)
@@ -114,6 +115,7 @@ public class PreferenceController {
         SharedPreferences.Editor prefEditor = sharedPreferences.edit();
 
         prefEditor.putString(instagramSourcePrefKey, appPreference.getInstagramSourceUrl());
+        prefEditor.putString(instagramSourceTagsPrefKey, appPreference.getInstagramSourceTags());
         prefEditor.putString(postNoPrefKey, String.valueOf(appPreference.getNumberOfPostsToDisplay()));
         prefEditor.putString(excludedHashtagsPrefKey, appPreference.getExcludedHashtags());
         prefEditor.putBoolean(isLikesDisplayedPrefKey, appPreference.isLikesDisplayed());
@@ -143,6 +145,7 @@ public class PreferenceController {
     private void getPreferenceKeys() {
         // Data pref keys
         instagramSourcePrefKey = context.getResources().getString(R.string.pref_instagram_source);
+        instagramSourceTagsPrefKey = context.getResources().getString(R.string.pref_instagram_source_tags);
         postNoPrefKey = context.getResources().getString(R.string.pref_post_no);
         isLikesDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_likes_displayed);
         isCommentsDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_comments_displayed);

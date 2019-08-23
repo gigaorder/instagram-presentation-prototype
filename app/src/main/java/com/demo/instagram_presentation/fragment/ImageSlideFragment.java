@@ -93,6 +93,8 @@ public class ImageSlideFragment extends Fragment {
     String progressDone;
     @BindString(R.string.pref_instagram_source)
     String instagramSourcePrefKey;
+    @BindString(R.string.pref_instagram_source_tags)
+    String instagramSourceTagsPrefKey;
     @BindString(R.string.pref_post_no)
     String postNoPrefKey;
     @BindString(R.string.pref_is_post_likes_displayed)
@@ -142,7 +144,9 @@ public class ImageSlideFragment extends Fragment {
 
     // Configs
     private List<String> excludedHashtags;
+    private List<String> requiredHashtags;
     private String instagramSourceUrl;
+    private String instagramSourceTags;
     private int numberOfPostsToDisplay;
     private int profilePicWidth;
     private int profilePicHeight;
@@ -168,6 +172,12 @@ public class ImageSlideFragment extends Fragment {
     private int lastNumberOfPosts;
     private int startPostIndex;
     private int nextSlideIndex;
+    private String instagramUsername;
+    private String userProfilePicUrl;
+
+    // Source URL can be an user's feed or a single hashtag
+    private String sourceUrl;
+    private boolean fetchByHashtags;
 
     /**
      * The number of posts user's Instagram feed has
@@ -207,60 +217,79 @@ public class ImageSlideFragment extends Fragment {
         // Hide components, show them after the images are loaded
         hideComponents();
 
-        // If source URL is not set -> request user to go to settings screen to setup first
-        if (instagramSourceUrl == null) {
+        // If both source URL and source hashtags are empty -> request user to go to settings screen to setup first
+        if (instagramSourceUrl.trim().isEmpty() && instagramSourceTags.trim().isEmpty()) {
             txtError.setVisibility(View.VISIBLE);
             txtError.setText(errorSourceUrlNotSet);
-        } else {
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    requestQueue.add(new StringRequest(instagramSourceUrl,
-                            success -> {
-                                instagramPosts = new ArrayList<>();
-                                newInstagramPosts = new ArrayList<>();
-                                nextSlideIndex = 0;
-
-                                txtError.setVisibility(View.GONE);
-                                txtProgress.setText(progressGettingFeedData);
-                                progressBar.setProgress(0);
-                                progressBar.setMax(numberOfPostsToDisplay);
-                                txtProgress.setVisibility(View.VISIBLE);
-
-                                // Start scraper to get posts of user
-                                scrollableWebScraper = new ScrollableWebScraper(webView, instagramSourceUrl);
-                                scrollableWebScraper.setHtmlExtractionListener(initialHtmlListener);
-
-                                getUserInfo();
-                                initScraperVariables();
-                                scrollableWebScraper.start();
-
-                                // Refresh task
-                                handler.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        initScraperVariables();
-                                        scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
-                                        scrollableWebScraper.start();
-                                        handler.postDelayed(this, refreshInterval * 60 * 1000); //refreshInterval is in minutes
-                                    }
-                                }, refreshInterval * 60 * 1000);
-                            },
-                            err -> {
-                                if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
-                                    txtError.setVisibility(View.VISIBLE);
-                                    txtError.setText(errorInvalidSourceUrl);
-                                } else {
-                                    // Retry
-                                    handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
-                                    startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
-                                }
-                            }));
-                }
-            });
+            return fragmentRootView;
+        }
+        // Source URL is not empty -> fetch by URL, filter hashtags
+        else if (!instagramSourceUrl.trim().isEmpty()) {
+            fetchByHashtags = false;
+            sourceUrl = instagramSourceUrl;
+        }
+        // Source URL is empty + Source hashtags is not empty -> fetch by hashtags
+        else {
+            fetchByHashtags = true;
+            // If source URL is empty, only 1 hashtag is allowed on config website
+            sourceUrl = InstagramUtil.constructInstagramHashtagQuery(instagramSourceTags);
         }
 
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                requestQueue.add(new StringRequest(sourceUrl,
+                        success -> {
+                            startFetchingPosts();
+                            startRefreshTask();
+                        },
+                        err -> {
+                            if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
+                                txtError.setVisibility(View.VISIBLE);
+                                txtError.setText(errorInvalidSourceUrl);
+                            } else {
+                                // Retry
+                                handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                                startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
+                            }
+                        }));
+            }
+        });
+
         return fragmentRootView;
+    }
+
+    private void startFetchingPosts() {
+        instagramPosts = new ArrayList<>();
+        newInstagramPosts = new ArrayList<>();
+        nextSlideIndex = 0;
+
+        txtError.setVisibility(View.GONE);
+        txtProgress.setText(progressGettingFeedData);
+        progressBar.setProgress(0);
+        progressBar.setMax(numberOfPostsToDisplay);
+        txtProgress.setVisibility(View.VISIBLE);
+
+        // Start scraper to get posts of user
+        scrollableWebScraper = new ScrollableWebScraper(webView, sourceUrl);
+        scrollableWebScraper.setHtmlExtractionListener(initialHtmlListener);
+
+        if (!fetchByHashtags) getUserInfo();
+
+        initScraperVariables();
+        scrollableWebScraper.start();
+    }
+
+    private void startRefreshTask() {
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                initScraperVariables();
+                scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
+                scrollableWebScraper.start();
+                handler.postDelayed(this, refreshInterval * 60 * 1000); //refreshInterval is in minutes
+            }
+        }, refreshInterval * 60 * 1000);
     }
 
     private void getUserInfo() {
@@ -277,10 +306,12 @@ public class ImageSlideFragment extends Fragment {
                             .getAsJsonObject().get("count")
                             .getAsInt();
 
-                    txtUsername.setText(userInfo.get("username").getAsString());
+                    instagramUsername = userInfo.get("username").getAsString();
+                    txtUsername.setText(instagramUsername);
 
+                    userProfilePicUrl = userInfo.get("profile_pic_url_hd").getAsString();
                     Picasso.get()
-                            .load(userInfo.get("profile_pic_url_hd").getAsString())
+                            .load(userProfilePicUrl)
                             .fit()
                             .centerCrop()
                             .into(imgProfile);
@@ -303,21 +334,28 @@ public class ImageSlideFragment extends Fragment {
 
     private void onInstagramPostRequestSuccess(InstagramPost instagramPost) {
         // If post contains excluded hashtag -> skip
-        if (checkExcludedHashtags(instagramPost.getCaption())) {
+        if (hasExcludedHashtags(instagramPost.getCaption())) {
+            shiftStartPostIndex(instagramPost.getIndex());
+            return;
+        }
+
+        // Perform required hashtags check if user use URL mode - fetch posts by URL
+        // If post does not contain one of required hashtags -> skip
+        if (!fetchByHashtags && !hasRequiredHashtags(instagramPost.getCaption())) {
             shiftStartPostIndex(instagramPost.getIndex());
             return;
         }
 
         instagramPosts.add(instagramPost);
 
-        if (maxNumberOfPostsReached) {
+        if (!maxNumberOfPostsReached) {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
             progressBar.setProgress(instagramPosts.size() + 1);
         }
 
         if (checkPostLimit(instagramPosts)) {
             hideProgress();
-            cleanupWebView();
+            webView.loadUrl("about:blank");
             maxNumberOfPostsReached = true;
         }
 
@@ -332,7 +370,7 @@ public class ImageSlideFragment extends Fragment {
     }
 
     private boolean checkPostLimit(List<InstagramPost> posts) {
-        return posts.size() >= numberOfPostsToDisplay || posts.size() >= feedMaxNumberOfPosts;
+        return posts.size() >= numberOfPostsToDisplay || posts.size() == feedMaxNumberOfPosts;
     }
 
     private void startImagePresentation(List<InstagramPost> instagramPosts) {
@@ -365,6 +403,22 @@ public class ImageSlideFragment extends Fragment {
                 txtNumberOfLikes.setText(noOfLikes);
                 txtNumberOfComments.setText(noOfComments);
                 txtPostCaption.setText(post.getCaption());
+
+                // Check if username and profile pic is new (in case user uses hashtags mode)
+                // If new -> reload username and profile pic
+                if (!post.getUsername().equals(instagramUsername)) {
+                    instagramUsername = post.getUsername();
+                    txtUsername.setText(instagramUsername);
+                }
+
+                if (!post.getUserProfilePicUrl().equals(userProfilePicUrl)) {
+                    userProfilePicUrl = post.getUserProfilePicUrl();
+                    Picasso.get()
+                            .load(userProfilePicUrl)
+                            .fit()
+                            .centerCrop()
+                            .into(imgProfile);
+                }
 
                 showComponents();
 
@@ -443,7 +497,8 @@ public class ImageSlideFragment extends Fragment {
 
     private void getPreferences() {
         // Data configs
-        instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
+        instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, "");
+        instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, "");
         numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
         isLikesDisplayed = sharedPreferences.getBoolean(isLikesDisplayedPrefKey, true);
         isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
@@ -463,13 +518,12 @@ public class ImageSlideFragment extends Fragment {
         presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL);
         refreshInterval = getIntValueFromPref(refreshIntervalPrefKey, Constants.DEFAULT_REFRESH_INTERVAL);
 
-        String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, "").toLowerCase();
+        String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, "");
 
-        if (excludedHashtagsString.isEmpty()) {
-            excludedHashtags = new ArrayList<>();
-        } else {
-            excludedHashtags = Arrays.asList(excludedHashtagsString.split(","));
-        }
+        excludedHashtags = excludedHashtagsString.isEmpty() ? new ArrayList<>()
+                : Arrays.asList(excludedHashtagsString.split(","));
+        requiredHashtags = instagramSourceTags.isEmpty() ? new ArrayList<>()
+                : Arrays.asList(instagramSourceTags.split(","));
     }
 
     private int getIntValueFromPref(String key, int defaultValue) {
@@ -522,15 +576,44 @@ public class ImageSlideFragment extends Fragment {
         txtServerInfo.setText(serverInfo);
     }
 
-    private boolean checkExcludedHashtags(String caption) {
+    private boolean hasExcludedHashtags(String caption) {
         if (excludedHashtags.isEmpty()) return false;
 
         for (String hashtag : excludedHashtags) {
-            if (caption != null && caption.toLowerCase().contains(hashtag)) {
+            if (caption != null && caption.toLowerCase().contains(hashtag.toLowerCase())) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean hasRequiredHashtags(String caption) {
+        if (requiredHashtags.isEmpty()) return true;
+
+        for (String hashtag : requiredHashtags) {
+            if (caption != null && caption.toLowerCase().contains(hashtag.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * This method checks the post index to avoid infinite scrolling
+     * After #SCROLL_COUNT_LIMIT times of scrolls, if no posts are added -> terminate the scrape process
+     */
+    private boolean checkInfiniteSroll(int postIndex) {
+        int lastPostIndex = 0;
+
+        if (!instagramPosts.isEmpty()) {
+            lastPostIndex = instagramPosts.get(instagramPosts.size() - 1).getIndex();
+        }
+
+        if (postIndex > (lastPostIndex + Constants.INFINITE_SCROLL_POST_COUNT)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -548,11 +631,6 @@ public class ImageSlideFragment extends Fragment {
                 && postIndex > startPostIndex + 12) {
             startPostIndex = instagramPosts.get(0).getIndex();
         }
-    }
-
-    private void cleanupWebView() {
-        webView.loadUrl("about:blank");
-        webView.clearHistory();
     }
 
     @Override
@@ -583,6 +661,11 @@ public class ImageSlideFragment extends Fragment {
             int postIndex = 0;
             for (InstagramPostElement postElement : postElementSet) {
                 final int index = postIndex++;
+
+                if (checkInfiniteSroll(index)) {
+                    hideProgress();
+                    return;
+                }
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
                     String postHref = postElement.getElement().attr("href");
@@ -630,7 +713,7 @@ public class ImageSlideFragment extends Fragment {
 
             instagramPosts = new ArrayList<>();
             instagramPosts.addAll(newInstagramPosts);
-            cleanupWebView();
+            webView.loadUrl("about:blank");
             return;
         }
 
@@ -647,6 +730,11 @@ public class ImageSlideFragment extends Fragment {
             int postIndex = 0;
             for (InstagramPostElement postElement : postElementSet) {
                 final int index = postIndex++;
+
+                if (checkInfiniteSroll(index)) {
+                    hideProgress();
+                    return;
+                }
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
                     String postHref = postElement.getElement().attr("href");
@@ -657,7 +745,7 @@ public class ImageSlideFragment extends Fragment {
                                 //Mark the element as requested -> won't be processed in the next iteration
                                 postElement.setRequested(true);
                                 InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
-                                if (!checkExcludedHashtags(post.getCaption())) {
+                                if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
                                     newInstagramPosts.add(post);
                                     maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
                                 }

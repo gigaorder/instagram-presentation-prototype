@@ -72,6 +72,12 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     String wifiDirectNoInfoMsg;
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
+    @BindString(R.string.wait_for_network)
+    String waitForNetworkMsg;
+    @BindString(R.string.pref_instagram_source)
+    String instagramSourceUrlPrefKey;
+    @BindString(R.string.pref_instagram_source_tags)
+    String instagramSourceTagsPrefKey;
 
     private SharedPreferences sharedPreferences;
     private WifiP2pManager wifiP2pManager;
@@ -103,45 +109,56 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         wifiManager = (WifiManager) rootActivity.getApplicationContext().getSystemService(WIFI_SERVICE);
+        String instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
+        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
 
         AppPreferencesUtil.setDefaultImageSize(rootActivity);
 
-        hideServerInfoText();
+        txtTimer.setVisibility(View.GONE);
+        txtServerInfo.setVisibility(View.VISIBLE);
 
-        if (configServerStarted) {
-            txtServerInfo.setVisibility(View.VISIBLE);
+        txtServerInfo.setText(waitForNetworkMsg);
 
-            // Register Broadcast Receiver
-            wifiConnectReceiver = new WifiConnectReceiver(this);
-            IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-            getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
-
-            if (isWifiConnected()) {
-                setServerInfoOnWifi();
-                txtError.setText(errorSourceUrlNotSet);
+        Handler handler = new Handler();
+        // Wait for a while to see if Wi-Fi will be available
+        handler.postDelayed(() -> {
+            if (isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+                // If Wi-Fi is available and source URL/tags are not null -> recreate to go to slide fragment
+                rootActivity.recreate();
             } else {
-                sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
-                // Turn on wifi and start scanning
-                wifiManager.setWifiEnabled(true);
-                wifiManager.startScan();
+                if (configServerStarted) {
+                    // Register Broadcast Receiver
+                    wifiConnectReceiver = new WifiConnectReceiver(this);
+                    IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+                    getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
 
-                // Start Wi-Fi Direct
-                // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
-                wifiP2pManager = (WifiP2pManager) rootActivity.getSystemService(WIFI_P2P_SERVICE);
-                wifiP2pChannel = wifiP2pManager.initialize(rootActivity.getApplicationContext(),
-                        rootActivity.getMainLooper(), null);
-                wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
+                    if (isWifiConnected()) {
+                        setServerInfoOnWifi();
+                        txtError.setText(errorSourceUrlNotSet);
+                    } else {
+                        sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
+                        // Turn on wifi and start scanning
+                        wifiManager.setWifiEnabled(true);
+                        wifiManager.startScan();
 
-                Handler handler = new Handler();
-                handler.postDelayed(() ->
-                        wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000);
-                // Delay because Wi-Fi Direct may not be initialized immediately
+                        // Start Wi-Fi Direct
+                        // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
+                        wifiP2pManager = (WifiP2pManager) rootActivity.getSystemService(WIFI_P2P_SERVICE);
+                        wifiP2pChannel = wifiP2pManager.initialize(rootActivity.getApplicationContext(),
+                                rootActivity.getMainLooper(), null);
+                        wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
+
+                        handler.postDelayed(() ->
+                                wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000);
+                        // Delay because Wi-Fi Direct may not be initialized immediately
+                    }
+                } else {
+                    txtError.setText(configServerCantStartMsg);
+                    txtError.setVisibility(View.VISIBLE);
+                    txtTimer.setVisibility(View.GONE);
+                }
             }
-        } else {
-            txtError.setText(configServerCantStartMsg);
-            txtError.setVisibility(View.VISIBLE);
-            txtTimer.setVisibility(View.GONE);
-        }
+        }, Constants.NETWORK_STATUS_CHECK_DELAY);
 
         return fragmentRootView;
     }

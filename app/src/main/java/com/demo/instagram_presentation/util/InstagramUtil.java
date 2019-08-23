@@ -21,6 +21,10 @@ public class InstagramUtil {
         return instagramSourceUrl;
     }
 
+    public static String constructInstagramHashtagQuery(String hashtag) {
+        return "https://www.instagram.com/explore/tags/" + hashtag.substring(1);
+    }
+
     public static InstagramPost parseInstagramPostHtml(String html, int postIndex, String postHref) {
         if (jsonParser == null) {
             jsonParser = new JsonParser();
@@ -88,6 +92,16 @@ public class InstagramUtil {
                 .getAsJsonObject().get("src")
                 .getAsString();
 
-        return new InstagramPost(likes, comments, caption, imgSrc, postIndex, postHref);
+        //Get username
+        String username = postInfo.get("owner")
+                .getAsJsonObject().get("username")
+                .getAsString();
+
+        //Get profile pic
+        String userProfilePic = postInfo.get("owner")
+                .getAsJsonObject().get("profile_pic_url")
+                .getAsString();
+
+        return new InstagramPost(likes, comments, caption, imgSrc, postIndex, postHref, username, userProfilePic);
     }
 }

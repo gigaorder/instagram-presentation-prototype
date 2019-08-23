@@ -12,6 +12,8 @@ public class InstagramPost implements Comparable<InstagramPost> {
     private String imgUrl;
     private int index;
     private String postHref;
+    private String username;
+    private String userProfilePicUrl;
 
     @Override
     public int compareTo(InstagramPost instagramPost) {

@@ -1,5 +1,6 @@
 package com.demo.instagram_presentation.data.scraper;
 
+import android.annotation.SuppressLint;
 import android.os.Handler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -22,6 +23,7 @@ public class ScrollableWebScraper {
         handler = new Handler();
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     public void start() {
         scrollStarted = false;
         webView.getSettings().setJavaScriptEnabled(true);
@@ -61,7 +63,7 @@ public class ScrollableWebScraper {
     }
 
     public void scrollToBottomWithDelay(int ms) {
-        handler.postDelayed(() -> scrollToBottom(), ms);
+        handler.postDelayed(this::scrollToBottom, ms);
     }
 
     public interface HtmlExtractionListener {
