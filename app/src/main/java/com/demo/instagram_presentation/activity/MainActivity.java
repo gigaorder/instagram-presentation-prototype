@@ -9,23 +9,33 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
 
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ConfigFragment;
 import com.demo.instagram_presentation.fragment.ImageSlideFragment;
+import com.demo.instagram_presentation.util.AppExceptionHandler;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.LicenseUtil;
+import com.demo.instagram_presentation.util.NetworkUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
+import java.util.ArrayList;
 
 import butterknife.BindString;
 import butterknife.ButterKnife;
@@ -40,16 +50,25 @@ public class MainActivity extends AppCompatActivity {
     private NanoHttpdWebServer webServer;
     private boolean configServerStarted;
     private WifiScanResultReceiver wifiScanResultReceiver;
+    private FragmentManager fragmentManager;
+    private Intent restartServiceIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        restartServiceIntent = new Intent(this, RestartAppService.class);
+        startService(restartServiceIntent);
+        Thread.setDefaultUncaughtExceptionHandler(new AppExceptionHandler(this));
+
+        fragmentManager = getSupportFragmentManager();
 
         if (!LicenseUtil.isKeyIdFileInitialized()) {
             LicenseUtil.initKeyIdFile();
         }
 
         AppPreferencesUtil.initSharedPreference(getApplicationContext());
+        NetworkUtil.initNetworkService(this);
 
         // Set fullscreen mode
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -74,26 +93,16 @@ public class MainActivity extends AppCompatActivity {
 
         startConfigServer();
 
-        if (isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
-            ImageSlideFragment imageSlideFragment = new ImageSlideFragment();
-
-            getSupportFragmentManager()
+        if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+            fragmentManager
                     .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, imageSlideFragment)
+                    .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
                     .commit();
         } else {
-            ConfigFragment configFragment = new ConfigFragment(configServerStarted);
-
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, configFragment)
+            fragmentManager.beginTransaction()
+                    .replace(R.id.main_activity_fragment_container, new ConfigFragment(configServerStarted))
                     .commit();
         }
-    }
-
-    private boolean isWifiConnected() {
-        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo wifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        return wifi.isConnected();
     }
 
     private void startConfigServer() {
@@ -109,13 +118,17 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            recreate();
+            fragmentManager
+                    .beginTransaction()
+                    .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                    .commit();
         }
     };
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+        stopService(restartServiceIntent);
         finish();
     }
 

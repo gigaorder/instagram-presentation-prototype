@@ -19,6 +19,7 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +34,7 @@ import com.demo.instagram_presentation.listener.WifiConnectListener;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
+import com.demo.instagram_presentation.util.NetworkUtil;
 import com.squareup.picasso.Picasso;
 
 import java.util.Locale;
@@ -86,6 +88,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private WifiConnectReceiver wifiConnectReceiver;
     private Activity rootActivity;
     private boolean configServerStarted;
+    private boolean wifiConnected;
 
     public ConfigFragment() {
     }
@@ -117,14 +120,26 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
 
-        txtServerInfo.setText(waitForNetworkMsg);
+        new CountDownTimer(Constants.NETWORK_STATUS_CHECK_DELAY, 1000) {
+            @Override
+            public void onTick(long l) {
+                txtServerInfo.setText(String.format(Locale.ENGLISH, waitForNetworkMsg, l / 1000));
+            }
+
+            @Override
+            public void onFinish() {
+            }
+        }.start();
 
         Handler handler = new Handler();
         // Wait for a while to see if Wi-Fi will be available
         handler.postDelayed(() -> {
-            if (isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
-                // If Wi-Fi is available and source URL/tags are not null -> recreate to go to slide fragment
-                rootActivity.recreate();
+            if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+                // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
+                getFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                        .commit();
             } else {
                 if (configServerStarted) {
                     // Register Broadcast Receiver
@@ -132,10 +147,11 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                     IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
                     getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
 
-                    if (isWifiConnected()) {
+                    if (NetworkUtil.isWifiConnected()) {
                         setServerInfoOnWifi();
                         txtError.setText(errorSourceUrlNotSet);
                     } else {
+                        wifiConnected = false;
                         sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
                         // Turn on wifi and start scanning
                         wifiManager.setWifiEnabled(true);
@@ -258,7 +274,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
     @Override
     public void onWifiConnected() {
-        if (!isWifiConnected()) {
+        if (!NetworkUtil.isWifiConnected()) {
             sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
 
             txtServerInfo.setText(wifiDetectedMsg);
@@ -268,16 +284,15 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                 if (wifiP2pChannel != null) {
                     wifiP2pManager.removeGroup(wifiP2pChannel, null);
                 }
-
-                rootActivity.recreate();
+                if (!wifiConnected) {
+                    wifiConnected = true;
+                    getFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                            .commit();
+                }
             }, 10000);
         }
-    }
-
-    private boolean isWifiConnected() {
-        ConnectivityManager connManager = (ConnectivityManager) rootActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo wifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        return wifi.isConnected();
     }
 
     @Override

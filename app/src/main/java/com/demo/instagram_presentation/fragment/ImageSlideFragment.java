@@ -30,6 +30,7 @@ import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
+import com.demo.instagram_presentation.util.NetworkUtil;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.squareup.picasso.Picasso;
@@ -37,6 +38,8 @@ import com.squareup.picasso.Picasso;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -80,6 +83,8 @@ public class ImageSlideFragment extends Fragment {
     TextView txtTimer;
     @BindView(R.id.fragment_present_webView)
     WebView webView;
+    @BindView(R.id.fragment_present_imgNetworkErr)
+    ImageView imgNetworkErr;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -172,8 +177,8 @@ public class ImageSlideFragment extends Fragment {
     private int lastNumberOfPosts;
     private int startPostIndex;
     private int nextSlideIndex;
-    private String instagramUsername;
-    private String userProfilePicUrl;
+    private String lastInstagramUsername;
+    private String lastUserProfilePicUrl;
 
     // Source URL can be an user's feed or a single hashtag
     private String sourceUrl;
@@ -190,6 +195,9 @@ public class ImageSlideFragment extends Fragment {
      * If the count exceeds a limit -> stop scrolling (scroll timeout)
      */
     private int scrollCount;
+
+    private Logger log = LoggerFactory.getLogger(ImageSlideFragment.class);
+    private final Runtime runtime = Runtime.getRuntime();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -235,61 +243,78 @@ public class ImageSlideFragment extends Fragment {
             sourceUrl = InstagramUtil.constructInstagramHashtagQuery(instagramSourceTags);
         }
 
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                requestQueue.add(new StringRequest(sourceUrl,
-                        success -> {
-                            startFetchingPosts();
-                            startRefreshTask();
-                        },
-                        err -> {
-                            if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
-                                txtError.setVisibility(View.VISIBLE);
-                                txtError.setText(errorInvalidSourceUrl);
-                            } else {
-                                // Retry
-                                handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
-                                startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
-                            }
-                        }));
-            }
-        });
+        startFetchingPosts();
 
         return fragmentRootView;
     }
 
     private void startFetchingPosts() {
-        instagramPosts = new ArrayList<>();
-        newInstagramPosts = new ArrayList<>();
-        nextSlideIndex = 0;
+        if (!NetworkUtil.isWifiConnected()) {
+            imgNetworkErr.setVisibility(View.VISIBLE);
+        } else {
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    requestQueue.add(new StringRequest(sourceUrl,
+                            success -> {
+                                instagramPosts = new ArrayList<>();
+                                newInstagramPosts = new ArrayList<>();
+                                nextSlideIndex = 0;
 
-        txtError.setVisibility(View.GONE);
-        txtProgress.setText(progressGettingFeedData);
-        progressBar.setProgress(0);
-        progressBar.setMax(numberOfPostsToDisplay);
-        txtProgress.setVisibility(View.VISIBLE);
+                                txtError.setVisibility(View.GONE);
+                                txtProgress.setText(progressGettingFeedData);
+                                txtProgress.setVisibility(View.VISIBLE);
+                                progressBar.setProgress(0);
+                                progressBar.setMax(numberOfPostsToDisplay);
 
-        // Start scraper to get posts of user
-        scrollableWebScraper = new ScrollableWebScraper(webView, sourceUrl);
-        scrollableWebScraper.setHtmlExtractionListener(initialHtmlListener);
+                                // Start scraper to get posts of user
+                                scrollableWebScraper = new ScrollableWebScraper(webView, sourceUrl);
+                                scrollableWebScraper.setHtmlExtractionListener(initialHtmlListener);
 
-        if (!fetchByHashtags) getUserInfo();
+                                if (!fetchByHashtags) getUserInfo();
 
-        initScraperVariables();
-        scrollableWebScraper.start();
+                                initScraperVariables();
+                                scrollableWebScraper.start();
+                            },
+                            err -> {
+                                if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
+                                    txtError.setVisibility(View.VISIBLE);
+                                    txtError.setText(errorInvalidSourceUrl);
+                                } else {
+                                    // Retry
+                                    handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                                    startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
+                                }
+                            }));
+                }
+            });
+        }
     }
 
-    private void startRefreshTask() {
+    private void startRefreshTaskAfter(int ms) {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                initScraperVariables();
-                scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
-                scrollableWebScraper.start();
-                handler.postDelayed(this, refreshInterval * 60 * 1000); //refreshInterval is in minutes
+                if (!NetworkUtil.isWifiConnected()) {
+                    imgNetworkErr.setVisibility(View.VISIBLE);
+                } else {
+                    requestQueue.add(new StringRequest(sourceUrl,
+                            success -> {
+                                initScraperVariables();
+                                scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
+
+                                scrollableWebScraper.start();
+                                imgNetworkErr.setVisibility(View.GONE);
+                            },
+                            // In case internet is unavailable when the task is running
+                            err -> {
+                                handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                                imgNetworkErr.setVisibility(View.VISIBLE);
+                            }));
+//                    handler.postDelayed(this, refreshInterval * 60 * 1000); //refreshInterval is in minutes
+                }
             }
-        }, refreshInterval * 60 * 1000);
+        }, ms);
     }
 
     private void getUserInfo() {
@@ -306,12 +331,12 @@ public class ImageSlideFragment extends Fragment {
                             .getAsJsonObject().get("count")
                             .getAsInt();
 
-                    instagramUsername = userInfo.get("username").getAsString();
-                    txtUsername.setText(instagramUsername);
+                    lastInstagramUsername = userInfo.get("username").getAsString();
+                    txtUsername.setText(lastInstagramUsername);
 
-                    userProfilePicUrl = userInfo.get("profile_pic_url_hd").getAsString();
+                    lastUserProfilePicUrl = userInfo.get("profile_pic_url_hd").getAsString();
                     Picasso.get()
-                            .load(userProfilePicUrl)
+                            .load(lastUserProfilePicUrl)
                             .fit()
                             .centerCrop()
                             .into(imgProfile);
@@ -347,6 +372,8 @@ public class ImageSlideFragment extends Fragment {
         }
 
         instagramPosts.add(instagramPost);
+        Picasso.get().load(instagramPost.getImgUrl()).fetch();
+        Picasso.get().load(instagramPost.getUserProfilePicUrl()).fetch();
 
         if (!maxNumberOfPostsReached) {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
@@ -365,7 +392,9 @@ public class ImageSlideFragment extends Fragment {
         // Start the slide when the first image is retrieved
         if (!slideStarted && !instagramPosts.isEmpty()
                 && ((instagramPosts.get(0).getIndex() == startPostIndex) || maxNumberOfPostsReached)) {
-            startImagePresentation(instagramPosts);
+            slideStarted = true;
+            startImagePresentation();
+            startRefreshTaskAfter(refreshInterval);
         }
     }
 
@@ -373,7 +402,7 @@ public class ImageSlideFragment extends Fragment {
         return posts.size() >= numberOfPostsToDisplay || posts.size() == feedMaxNumberOfPosts;
     }
 
-    private void startImagePresentation(List<InstagramPost> instagramPosts) {
+    private void startImagePresentation() {
         if (imagePresentationLoader != null) {
             handler.removeCallbacks(imagePresentationLoader);
         }
@@ -381,19 +410,28 @@ public class ImageSlideFragment extends Fragment {
         imagePresentationLoader = new Runnable() {
             @Override
             public void run() {
+                if (instagramPosts.isEmpty()) return;
+
                 int index = getNextSlideIndex();
 
-                if (index >= numberOfPostsToDisplay || index >= instagramPosts.size()) {
+                if (index == numberOfPostsToDisplay - 1 || index == instagramPosts.size() - 1) {
+                    // If index is at the end -> run the slide from the beginning in the next iteration
+                    setNextSlideIndex(0);
+                } else if (index > numberOfPostsToDisplay - 1 || index > instagramPosts.size() - 1) {
+                    // If index is out of bounds -> run the slide from the beginning right away
                     index = 0;
+                    setNextSlideIndex(1);
+                } else {
+                    setNextSlideIndex(index + 1);
                 }
 
-                setNextSlideIndex(index + 1);
                 InstagramPost post = instagramPosts.get(index);
 
                 Picasso.get()
                         .load(post.getImgUrl())
                         .fit()
                         .centerCrop()
+                        .noFade()
                         .into(imgMain);
 
                 DecimalFormat numberFormatter = new DecimalFormat("#,###");
@@ -406,15 +444,15 @@ public class ImageSlideFragment extends Fragment {
 
                 // Check if username and profile pic is new (in case user uses hashtags mode)
                 // If new -> reload username and profile pic
-                if (!post.getUsername().equals(instagramUsername)) {
-                    instagramUsername = post.getUsername();
-                    txtUsername.setText(instagramUsername);
+                if (!post.getUsername().equals(lastInstagramUsername)) {
+                    lastInstagramUsername = post.getUsername();
+                    txtUsername.setText(lastInstagramUsername);
                 }
 
-                if (!post.getUserProfilePicUrl().equals(userProfilePicUrl)) {
-                    userProfilePicUrl = post.getUserProfilePicUrl();
+                if (!post.getUserProfilePicUrl().equals(lastUserProfilePicUrl)) {
+                    lastUserProfilePicUrl = post.getUserProfilePicUrl();
                     Picasso.get()
-                            .load(userProfilePicUrl)
+                            .load(lastUserProfilePicUrl)
                             .fit()
                             .centerCrop()
                             .into(imgProfile);
@@ -427,7 +465,6 @@ public class ImageSlideFragment extends Fragment {
         };
 
         handler.post(imagePresentationLoader);
-        slideStarted = true;
     }
 
     public int getNextSlideIndex() {
@@ -698,22 +735,24 @@ public class ImageSlideFragment extends Fragment {
 
     private ScrollableWebScraper.HtmlExtractionListener refreshHtmlListener = html -> {
         if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
-            Collections.sort(newInstagramPosts);
-
-            String currentPostHref = instagramPosts.get(nextSlideIndex).getPostHref();
-
-            for (int i = 0; i < newInstagramPosts.size(); i++) {
-                if (currentPostHref.equals(newInstagramPosts.get(i).getPostHref())) {
-                    nextSlideIndex = i;
-                }
-            }
-
-            handler.removeCallbacks(imagePresentationLoader);
-            startImagePresentation(newInstagramPosts);
-
-            instagramPosts = new ArrayList<>();
-            instagramPosts.addAll(newInstagramPosts);
             webView.loadUrl("about:blank");
+
+            if (!newInstagramPosts.isEmpty()) {
+                Collections.sort(newInstagramPosts);
+
+                String currentPostHref = instagramPosts.get(nextSlideIndex).getPostHref();
+                for (int i = 0; i < newInstagramPosts.size(); i++) {
+                    if (currentPostHref.equals(newInstagramPosts.get(i).getPostHref())) {
+                        nextSlideIndex = i;
+                    }
+                }
+
+                instagramPosts = new ArrayList<>();
+                instagramPosts.addAll(newInstagramPosts);
+
+                startImagePresentation();
+            }
+            startRefreshTaskAfter(refreshInterval);
             return;
         }
 
@@ -747,6 +786,8 @@ public class ImageSlideFragment extends Fragment {
                                 InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
                                 if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
                                     newInstagramPosts.add(post);
+                                    Picasso.get().load(post.getImgUrl()).fetch();
+                                    Picasso.get().load(post.getUserProfilePicUrl()).fetch();
                                     maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
                                 }
                             },
@@ -767,4 +808,15 @@ public class ImageSlideFragment extends Fragment {
             scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
         }
     };
+
+    private void logMemory(String msg) {
+        final long usedMemInMB = (runtime.totalMemory() - runtime.freeMemory()) / 1048576L;
+        final long maxHeapSizeInMB = runtime.maxMemory() / 1048576L;
+        final long availHeapSizeInMB = maxHeapSizeInMB - usedMemInMB;
+
+        log.debug(msg);
+        log.debug("usedMemInMB: " + usedMemInMB + "MB");
+        log.debug("maxHeapSizeInMB: " + maxHeapSizeInMB + "MB");
+        log.debug("availHeapSizeInMB: " + availHeapSizeInMB + "MB");
+    }
 }

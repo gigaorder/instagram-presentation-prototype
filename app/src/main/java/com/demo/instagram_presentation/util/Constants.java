@@ -2,8 +2,8 @@ package com.demo.instagram_presentation.util;
 
 public class Constants {
     //Config constants
-    public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000;
-    public static final int DEFAULT_PRESENTATION_INTERVAL = 10 * 1000;
+    public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000; // in seconds
+    public static final int DEFAULT_PRESENTATION_INTERVAL = 10 * 1000; // in seconds
     public static final int DEFAULT_REFRESH_INTERVAL = 60; // in minutes
     public static final int DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY = 5;
 

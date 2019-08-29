@@ -8,9 +8,6 @@ import androidx.preference.PreferenceManager;
 
 import com.demo.instagram_presentation.R;
 
-import butterknife.BindString;
-import butterknife.ButterKnife;
-
 public class AppPreferencesUtil {
     private static String imgMainWidthPrefKey;
     private static String imgMainHeightPrefKey;
