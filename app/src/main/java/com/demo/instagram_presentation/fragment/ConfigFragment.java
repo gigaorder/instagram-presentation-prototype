@@ -275,7 +275,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
     @Override
     public void onWifiConnected() {
-        if (!NetworkUtil.isWifiConnected()) {
+        if (!wifiConnected) {
             wifiConnected = true;
             txtServerInfo.setText(wifiDetectedMsg);
             Handler handler = new Handler();
@@ -286,7 +286,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                 if (wifiP2pChannel != null) {
                     wifiP2pManager.removeGroup(wifiP2pChannel, null);
                 }
-
 
                 if (instagramSourceUrl != null || instagramSourceTags != null) {
                     getFragmentManager()

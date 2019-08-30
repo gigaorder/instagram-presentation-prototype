@@ -11,10 +11,10 @@ public class NetworkUtil {
 
     public static void initNetworkService(Activity activity) {
         connectivityManager = (ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
-        networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
     }
 
     public static boolean isWifiConnected() {
+        networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         return networkInfo.isConnected();
     }
 }
