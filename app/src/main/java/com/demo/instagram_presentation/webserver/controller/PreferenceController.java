@@ -50,15 +50,15 @@ public class PreferenceController {
 
     public NanoHTTPD.Response getPreferences() {
         // Data configs
-        String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, null);
-        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
+        String instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, "");
+        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, "");
         int numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
         boolean isLikesDisplayed = sharedPreferences.getBoolean(isLikesDisplayedPrefKey, true);
         boolean isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
         boolean isCaptionDisplayed = sharedPreferences.getBoolean(isPostCaptionDisplayedPrefKey, true);
         boolean isProfilePicDisplayed = sharedPreferences.getBoolean(isProfilePicDisplayedPrefKey, true);
         boolean isUsernameDisplayed = sharedPreferences.getBoolean(isUsernameDisplayPrefKey, true);
-        String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, null);
+        String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, "");
 
         // Size configs
         int profilePicWidth = getIntValueFromPref(profilePicWidthPrefKey, Constants.DEFAULT_PROFILE_PIC_WIDTH);

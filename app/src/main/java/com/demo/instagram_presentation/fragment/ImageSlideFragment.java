@@ -251,7 +251,9 @@ public class ImageSlideFragment extends Fragment {
     private void startFetchingPosts() {
         if (!NetworkUtil.isWifiConnected()) {
             imgNetworkErr.setVisibility(View.VISIBLE);
+            handler.postDelayed(this::startFetchingPosts, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
         } else {
+            imgNetworkErr.setVisibility(View.GONE);
             handler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -412,17 +414,17 @@ public class ImageSlideFragment extends Fragment {
             public void run() {
                 if (instagramPosts.isEmpty()) return;
 
-                int index = getNextSlideIndex();
+                int index = nextSlideIndex;
 
                 if (index == numberOfPostsToDisplay - 1 || index == instagramPosts.size() - 1) {
                     // If index is at the end -> run the slide from the beginning in the next iteration
-                    setNextSlideIndex(0);
+                    nextSlideIndex = 0;
                 } else if (index > numberOfPostsToDisplay - 1 || index > instagramPosts.size() - 1) {
                     // If index is out of bounds -> run the slide from the beginning right away
                     index = 0;
-                    setNextSlideIndex(1);
+                    nextSlideIndex = 1;
                 } else {
-                    setNextSlideIndex(index + 1);
+                    nextSlideIndex += 1;
                 }
 
                 InstagramPost post = instagramPosts.get(index);
@@ -465,14 +467,6 @@ public class ImageSlideFragment extends Fragment {
         };
 
         handler.post(imagePresentationLoader);
-    }
-
-    public int getNextSlideIndex() {
-        return nextSlideIndex++;
-    }
-
-    public void setNextSlideIndex(int nextSlideIndex) {
-        this.nextSlideIndex = nextSlideIndex;
     }
 
     private void hideProgress() {

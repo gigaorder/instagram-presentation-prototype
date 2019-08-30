@@ -1,13 +1,10 @@
 package com.demo.instagram_presentation.fragment;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -19,7 +16,6 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -89,6 +85,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private Activity rootActivity;
     private boolean configServerStarted;
     private boolean wifiConnected;
+    private ConfigFragment thisFragment;
+    private String instagramSourceUrl;
+    private String instagramSourceTags;
 
     public ConfigFragment() {
     }
@@ -104,6 +103,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         View fragmentRootView = inflater.inflate(R.layout.fragment_config, container, false);
         ButterKnife.bind(this, fragmentRootView);
         rootActivity = getActivity();
+        thisFragment = this;
 
         // Load background images
         Picasso.get().load(R.drawable.fallback_screen_bg_16_9).centerCrop().fit().noFade().into(imgBackground);
@@ -112,14 +112,15 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         wifiManager = (WifiManager) rootActivity.getApplicationContext().getSystemService(WIFI_SERVICE);
-        String instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
-        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
+        instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
+        instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
 
         AppPreferencesUtil.setDefaultImageSize(rootActivity);
 
         txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
 
+        Handler handler = new Handler();
         new CountDownTimer(Constants.NETWORK_STATUS_CHECK_DELAY, 1000) {
             @Override
             public void onTick(long l) {
@@ -128,53 +129,48 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
             @Override
             public void onFinish() {
-            }
-        }.start();
-
-        Handler handler = new Handler();
-        // Wait for a while to see if Wi-Fi will be available
-        handler.postDelayed(() -> {
-            if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
-                // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
-                getFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                        .commit();
-            } else {
-                if (configServerStarted) {
-                    // Register Broadcast Receiver
-                    wifiConnectReceiver = new WifiConnectReceiver(this);
-                    IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-                    getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
-
-                    if (NetworkUtil.isWifiConnected()) {
-                        setServerInfoOnWifi();
-                        txtError.setText(errorSourceUrlNotSet);
-                    } else {
-                        wifiConnected = false;
-                        sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
-                        // Turn on wifi and start scanning
-                        wifiManager.setWifiEnabled(true);
-                        wifiManager.startScan();
-
-                        // Start Wi-Fi Direct
-                        // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
-                        wifiP2pManager = (WifiP2pManager) rootActivity.getSystemService(WIFI_P2P_SERVICE);
-                        wifiP2pChannel = wifiP2pManager.initialize(rootActivity.getApplicationContext(),
-                                rootActivity.getMainLooper(), null);
-                        wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
-
-                        handler.postDelayed(() ->
-                                wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000);
-                        // Delay because Wi-Fi Direct may not be initialized immediately
-                    }
+                if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+                    // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
+                    getFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                            .commit();
                 } else {
-                    txtError.setText(configServerCantStartMsg);
-                    txtError.setVisibility(View.VISIBLE);
-                    txtTimer.setVisibility(View.GONE);
+                    if (configServerStarted) {
+                        if (NetworkUtil.isWifiConnected()) {
+                            setServerInfoOnWifi();
+                            txtError.setText(errorSourceUrlNotSet);
+                        } else {
+                            wifiConnected = false;
+
+                            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
+                            // Turn on wifi and start scanning
+                            wifiManager.setWifiEnabled(true);
+
+                            // Start Wi-Fi Direct
+                            // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
+                            wifiP2pManager = (WifiP2pManager) rootActivity.getSystemService(WIFI_P2P_SERVICE);
+                            wifiP2pChannel = wifiP2pManager.initialize(rootActivity.getApplicationContext(),
+                                    rootActivity.getMainLooper(), null);
+                            wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
+
+                            // Delay because Wi-Fi Direct may not be initialized immediately
+                            handler.postDelayed(() ->
+                                    wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000);
+
+                            wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
+                            IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+                            getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
+                            wifiManager.startScan();
+                        }
+                    } else {
+                        txtError.setText(configServerCantStartMsg);
+                        txtError.setVisibility(View.VISIBLE);
+                        txtTimer.setVisibility(View.GONE);
+                    }
                 }
             }
-        }, Constants.NETWORK_STATUS_CHECK_DELAY);
+        }.start();
 
         return fragmentRootView;
     }
@@ -229,11 +225,14 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private WifiP2pManager.ActionListener onWifiDirectStartedListener = new WifiP2pManager.ActionListener() {
         @Override
         public void onSuccess() {
+            if (wifiConnected) return;
             txtServerInfo.setText(gettingInfoMsg);
         }
 
         @Override
         public void onFailure(int reason) {
+            if (wifiConnected) return;
+
             if (reason == WifiP2pManager.ERROR) {
                 txtServerInfo.setText(wifiDirectCantStartMsg);
             } else {
@@ -244,6 +243,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     };
 
     private WifiP2pManager.GroupInfoListener wifiP2pInfoListener = groupInfo -> {
+        if (wifiConnected) return;
+
         // Set server info on WiFi Direct
         if (groupInfo != null) {
             String p2pNetworkName = groupInfo.getNetworkName();
@@ -275,21 +276,27 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     @Override
     public void onWifiConnected() {
         if (!NetworkUtil.isWifiConnected()) {
-            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
-
+            wifiConnected = true;
             txtServerInfo.setText(wifiDetectedMsg);
             Handler handler = new Handler();
 
             handler.postDelayed(() -> {
+                sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
+
                 if (wifiP2pChannel != null) {
                     wifiP2pManager.removeGroup(wifiP2pChannel, null);
                 }
-                if (!wifiConnected) {
-                    wifiConnected = true;
+
+
+                if (instagramSourceUrl != null || instagramSourceTags != null) {
                     getFragmentManager()
                             .beginTransaction()
                             .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
                             .commit();
+                    rootActivity.recreate();
+                } else {
+                    setServerInfoOnWifi();
+                    txtError.setText(errorSourceUrlNotSet);
                 }
             }, 10000);
         }

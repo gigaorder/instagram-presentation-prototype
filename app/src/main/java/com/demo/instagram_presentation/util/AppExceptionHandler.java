@@ -24,8 +24,9 @@ public class AppExceptionHandler implements Thread.UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
+        throwable.printStackTrace();
         log.debug("Exception caught, app will be restarted");
-        log.debug(throwable.toString());
+        log.debug(throwable.getStackTrace().toString());
 
         Intent intent = new Intent(activity, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP

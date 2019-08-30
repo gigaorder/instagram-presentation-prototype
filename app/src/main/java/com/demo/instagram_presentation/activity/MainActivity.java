@@ -5,18 +5,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentManager;
 
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.RestartAppService;
@@ -31,11 +26,7 @@ import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
-import java.util.ArrayList;
 
 import butterknife.BindString;
 import butterknife.ButterKnife;
@@ -50,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
     private NanoHttpdWebServer webServer;
     private boolean configServerStarted;
     private WifiScanResultReceiver wifiScanResultReceiver;
-    private FragmentManager fragmentManager;
     private Intent restartServiceIntent;
 
     @Override
@@ -60,8 +50,6 @@ public class MainActivity extends AppCompatActivity {
         restartServiceIntent = new Intent(this, RestartAppService.class);
         startService(restartServiceIntent);
         Thread.setDefaultUncaughtExceptionHandler(new AppExceptionHandler(this));
-
-        fragmentManager = getSupportFragmentManager();
 
         if (!LicenseUtil.isKeyIdFileInitialized()) {
             LicenseUtil.initKeyIdFile();
@@ -94,12 +82,13 @@ public class MainActivity extends AppCompatActivity {
         startConfigServer();
 
         if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
-            fragmentManager
+            getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
                     .commit();
         } else {
-            fragmentManager.beginTransaction()
+            getSupportFragmentManager()
+                    .beginTransaction()
                     .replace(R.id.main_activity_fragment_container, new ConfigFragment(configServerStarted))
                     .commit();
         }
@@ -118,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            fragmentManager
+            getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
                     .commit();

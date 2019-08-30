@@ -39,7 +39,7 @@ public class StaticFileHandler {
             } else if (requestUri.endsWith(".map")) {
                 return NanoHTTPD.newChunkedResponse(NanoHTTPD.Response.Status.OK, "application/json", inputStream);
             } else {
-                return errorController.returnNotFound();
+                return NanoHTTPD.newChunkedResponse(NanoHTTPD.Response.Status.OK, "text/plain", inputStream);
             }
         } catch (IOException e) {
             e.printStackTrace();
