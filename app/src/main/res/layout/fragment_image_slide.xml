@@ -9,11 +9,11 @@
     tools:appContext=".fragment.ImagePresentationFragment">
 
     <ImageView
-        android:id="@+id/fragment_present_imgNetworkErr"
+        android:id="@+id/fragment_present_imgNetworkStrength"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
-        android:src="@drawable/baseline_wifi_off_black_48"
+        android:src="@drawable/ic_signal_wifi_4_bar_black_48dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/fragment_present_layout_user_section"
         app:layout_constraintEnd_toEndOf="parent"
@@ -48,6 +48,20 @@
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/fragment_present_layout_user_section"
         app:layout_constraintEnd_toStartOf="@id/fragment_present_progressBar"
+        app:layout_constraintTop_toTopOf="@id/fragment_present_layout_user_section" />
+
+
+    <androidx.core.widget.ContentLoadingProgressBar
+        android:id="@+id/fragment_present_progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="200dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="16dp"
+        android:progress="0"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/fragment_present_layout_user_section"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/fragment_present_imgNetworkStrength"
         app:layout_constraintTop_toTopOf="@id/fragment_present_layout_user_section" />
 
     <TextView
@@ -166,16 +180,4 @@
             app:layout_constraintStart_toEndOf="@id/fragment_present_imgProfile"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.core.widget.ContentLoadingProgressBar
-        android:id="@+id/fragment_present_progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="200dp"
-        android:layout_height="20dp"
-        android:layout_marginEnd="16dp"
-        android:progress="0"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/fragment_present_layout_user_section"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/fragment_present_layout_user_section" />
 </androidx.constraintlayout.widget.ConstraintLayout>

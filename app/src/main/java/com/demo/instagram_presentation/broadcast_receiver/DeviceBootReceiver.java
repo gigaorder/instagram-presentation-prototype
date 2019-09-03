@@ -11,6 +11,7 @@ public class DeviceBootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             Intent startActivityIntent = new Intent(context, MainActivity.class);
+            startActivityIntent.putExtra("deviceBoot", true);
             startActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(startActivityIntent);
         }

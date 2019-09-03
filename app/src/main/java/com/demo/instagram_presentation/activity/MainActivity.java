@@ -14,7 +14,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.RestartAppService;
+import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ConfigFragment;
 import com.demo.instagram_presentation.fragment.ImageSlideFragment;
@@ -46,6 +46,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
+
+        AppPreferencesUtil.initSharedPreference(getApplicationContext());
+        NetworkUtil.initNetworkService(this);
 
         restartServiceIntent = new Intent(this, RestartAppService.class);
         startService(restartServiceIntent);
@@ -54,9 +58,6 @@ public class MainActivity extends AppCompatActivity {
         if (!LicenseUtil.isKeyIdFileInitialized()) {
             LicenseUtil.initKeyIdFile();
         }
-
-        AppPreferencesUtil.initSharedPreference(getApplicationContext());
-        NetworkUtil.initNetworkService(this);
 
         // Set fullscreen mode
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -81,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
 
         startConfigServer();
 
-        if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+        if (!deviceBoot && NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
             getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())

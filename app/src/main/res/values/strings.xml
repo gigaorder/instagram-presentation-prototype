@@ -15,6 +15,7 @@
     <string name="getting_p2p_info">Getting Wi-Fi Direct info…</string>
     <string name="wifi_detected">"Wifi detected, app will restart after 10 seconds"</string>
     <string name="wait_for_network">Waiting for network status…\nRemaining time: %d seconds</string>
+    <string name="app_info_text">App version: %s\nDevice ID: %s</string>
 
     <string name="timer_msg_server">This message will disappear in %d seconds</string>
     <string name="timer_msg_retry">Can not get data from Instagram\nRetrying in %d seconds</string>
@@ -62,4 +63,5 @@
     <string name="pref_refresh_interval">refresh_interval</string>
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
+    <string name="pref_app_id">app_id</string>
 </resources>

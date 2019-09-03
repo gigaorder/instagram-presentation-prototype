@@ -24,6 +24,8 @@ import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
+import com.demo.instagram_presentation.App;
+import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.broadcast_receiver.WifiConnectReceiver;
 import com.demo.instagram_presentation.listener.WifiConnectListener;
@@ -55,6 +57,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     ImageView imgLogo;
     @BindView(R.id.fragment_config_txtError)
     TextView txtError;
+    @BindView(R.id.fragment_config_txtAppInfo)
+    TextView txtAppInfo;
 
     @BindString(R.string.config_server_cant_start)
     String configServerCantStartMsg;
@@ -76,6 +80,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     String instagramSourceUrlPrefKey;
     @BindString(R.string.pref_instagram_source_tags)
     String instagramSourceTagsPrefKey;
+    @BindString(R.string.app_info_text)
+    String appInfoMsg;
 
     private SharedPreferences sharedPreferences;
     private WifiP2pManager wifiP2pManager;
@@ -119,6 +125,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
         txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
+        txtAppInfo.setText(String.format(Locale.ENGLISH, appInfoMsg, BuildConfig.VERSION_NAME, App.DEVICE_ID));
 
         Handler handler = new Handler();
         new CountDownTimer(Constants.NETWORK_STATUS_CHECK_DELAY, 1000) {
@@ -292,7 +299,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                             .beginTransaction()
                             .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
                             .commit();
-                    rootActivity.recreate();
                 } else {
                     setServerInfoOnWifi();
                     txtError.setText(errorSourceUrlNotSet);

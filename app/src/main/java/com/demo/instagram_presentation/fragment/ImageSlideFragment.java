@@ -22,6 +22,9 @@ import androidx.fragment.app.Fragment;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.App;
+import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.data.scraper.ScrollableWebScraper;
 import com.demo.instagram_presentation.model.InstagramPost;
@@ -83,8 +86,8 @@ public class ImageSlideFragment extends Fragment {
     TextView txtTimer;
     @BindView(R.id.fragment_present_webView)
     WebView webView;
-    @BindView(R.id.fragment_present_imgNetworkErr)
-    ImageView imgNetworkErr;
+    @BindView(R.id.fragment_present_imgNetworkStrength)
+    ImageView imgNetworkStrength;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -198,6 +201,7 @@ public class ImageSlideFragment extends Fragment {
 
     private Logger log = LoggerFactory.getLogger(ImageSlideFragment.class);
     private final Runtime runtime = Runtime.getRuntime();
+    private final String bugfenderTag = App.DEVICE_ID;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -224,6 +228,7 @@ public class ImageSlideFragment extends Fragment {
 
         // Hide components, show them after the images are loaded
         hideComponents();
+        startNetworkStrengthScan(Constants.NETWORK_SIGNAL_SCAN_INTERVAL);
 
         // If both source URL and source hashtags are empty -> request user to go to settings screen to setup first
         if (instagramSourceUrl.trim().isEmpty() && instagramSourceTags.trim().isEmpty()) {
@@ -250,10 +255,10 @@ public class ImageSlideFragment extends Fragment {
 
     private void startFetchingPosts() {
         if (!NetworkUtil.isWifiConnected()) {
-            imgNetworkErr.setVisibility(View.VISIBLE);
+            imgNetworkStrength.setVisibility(View.VISIBLE);
             handler.postDelayed(this::startFetchingPosts, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
         } else {
-            imgNetworkErr.setVisibility(View.GONE);
+            imgNetworkStrength.setVisibility(View.GONE);
             handler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -277,16 +282,21 @@ public class ImageSlideFragment extends Fragment {
 
                                 initScraperVariables();
                                 scrollableWebScraper.start();
+                                Bugfender.d(bugfenderTag, "Initial request success, web scraper will be started");
+                                logMemory();
                             },
                             err -> {
                                 if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
+                                    Bugfender.e(bugfenderTag, "Initial request failed due to 404 error, Instagram source may be invalid");
                                     txtError.setVisibility(View.VISIBLE);
                                     txtError.setText(errorInvalidSourceUrl);
                                 } else {
                                     // Retry
+                                    Bugfender.e(bugfenderTag, "Initial request failed due to network error, retrying...");
                                     handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
                                     startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
                                 }
+                                Bugfender.e(bugfenderTag, "Initial request error: " + err.getMessage());
                             }));
                 }
             });
@@ -297,23 +307,27 @@ public class ImageSlideFragment extends Fragment {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+                Bugfender.d(bugfenderTag, "Start refreshing posts");
                 if (!NetworkUtil.isWifiConnected()) {
-                    imgNetworkErr.setVisibility(View.VISIBLE);
+                    Bugfender.e(bugfenderTag, "Refreshing posts status: Wi-Fi unavailable");
+                    imgNetworkStrength.setVisibility(View.VISIBLE);
                 } else {
                     requestQueue.add(new StringRequest(sourceUrl,
                             success -> {
+                                Bugfender.d(bugfenderTag, "Refresh request success");
                                 initScraperVariables();
                                 scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
 
                                 scrollableWebScraper.start();
-                                imgNetworkErr.setVisibility(View.GONE);
+                                imgNetworkStrength.setVisibility(View.GONE);
                             },
                             // In case internet is unavailable when the task is running
                             err -> {
+                                Bugfender.e(bugfenderTag, "Refresh request failed, retrying... ");
+                                Bugfender.e(bugfenderTag, "Refresh request error: " + err.getMessage());
                                 handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
-                                imgNetworkErr.setVisibility(View.VISIBLE);
+                                imgNetworkStrength.setVisibility(View.VISIBLE);
                             }));
-//                    handler.postDelayed(this, refreshInterval * 60 * 1000); //refreshInterval is in minutes
                 }
             }
         }, ms);
@@ -380,12 +394,14 @@ public class ImageSlideFragment extends Fragment {
         if (!maxNumberOfPostsReached) {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
             progressBar.setProgress(instagramPosts.size() + 1);
-        }
 
-        if (checkPostLimit(instagramPosts)) {
-            hideProgress();
-            webView.loadUrl("about:blank");
-            maxNumberOfPostsReached = true;
+            if (checkPostLimit(instagramPosts)) {
+                hideProgress();
+                webView.loadUrl("about:blank");
+                maxNumberOfPostsReached = true;
+                Bugfender.d(bugfenderTag, "Finished fetching posts");
+                logMemory();
+            }
         }
 
         // Sort posts using the order of the posts in HTML document
@@ -414,17 +430,12 @@ public class ImageSlideFragment extends Fragment {
             public void run() {
                 if (instagramPosts.isEmpty()) return;
 
-                int index = nextSlideIndex;
+                int index = nextSlideIndex++;
 
-                if (index == numberOfPostsToDisplay - 1 || index == instagramPosts.size() - 1) {
-                    // If index is at the end -> run the slide from the beginning in the next iteration
-                    nextSlideIndex = 0;
-                } else if (index > numberOfPostsToDisplay - 1 || index > instagramPosts.size() - 1) {
-                    // If index is out of bounds -> run the slide from the beginning right away
+                if (index > numberOfPostsToDisplay - 1 || index > instagramPosts.size() - 1) {
+                    // If index is out of bounds -> run the slide from the beginning
                     index = 0;
                     nextSlideIndex = 1;
-                } else {
-                    nextSlideIndex += 1;
                 }
 
                 InstagramPost post = instagramPosts.get(index);
@@ -433,7 +444,6 @@ public class ImageSlideFragment extends Fragment {
                         .load(post.getImgUrl())
                         .fit()
                         .centerCrop()
-                        .noFade()
                         .into(imgMain);
 
                 DecimalFormat numberFormatter = new DecimalFormat("#,###");
@@ -729,6 +739,8 @@ public class ImageSlideFragment extends Fragment {
 
     private ScrollableWebScraper.HtmlExtractionListener refreshHtmlListener = html -> {
         if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
+            Bugfender.d(bugfenderTag, "Finished fetching posts");
+            logMemory();
             webView.loadUrl("about:blank");
 
             if (!newInstagramPosts.isEmpty()) {
@@ -780,7 +792,7 @@ public class ImageSlideFragment extends Fragment {
                                 InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
                                 if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
                                     newInstagramPosts.add(post);
-                                    Picasso.get().load(post.getImgUrl()).fetch();
+                                    Picasso.get().load(post.getImgUrl()).resize(imgMainWidth, imgMainHeight).centerCrop().fetch();
                                     Picasso.get().load(post.getUserProfilePicUrl()).fetch();
                                     maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
                                 }
@@ -803,14 +815,36 @@ public class ImageSlideFragment extends Fragment {
         }
     };
 
-    private void logMemory(String msg) {
+    private void startNetworkStrengthScan(int intervalInMs) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                int networkStrength = NetworkUtil.getNetworkStrength(5);
+                String packageName = BuildConfig.APPLICATION_ID;
+                String drawableName = "ic_signal_wifi_" + networkStrength + "_bar_black_48dp";
+
+                int drawableId = getResources().getIdentifier(packageName + ":drawable/" + drawableName, null, null);
+                imgNetworkStrength.setImageDrawable(getResources().getDrawable(drawableId));
+
+                if (imgNetworkStrength.getVisibility() == View.GONE) {
+                    imgNetworkStrength.setVisibility(View.VISIBLE);
+                }
+
+                handler.postDelayed(this, intervalInMs);
+            }
+        });
+    }
+
+    private void logMemory() {
         final long usedMemInMB = (runtime.totalMemory() - runtime.freeMemory()) / 1048576L;
         final long maxHeapSizeInMB = runtime.maxMemory() / 1048576L;
-        final long availHeapSizeInMB = maxHeapSizeInMB - usedMemInMB;
+//        final long availHeapSizeInMB = maxHeapSizeInMB - usedMemInMB;
 
-        log.debug(msg);
-        log.debug("usedMemInMB: " + usedMemInMB + "MB");
-        log.debug("maxHeapSizeInMB: " + maxHeapSizeInMB + "MB");
-        log.debug("availHeapSizeInMB: " + availHeapSizeInMB + "MB");
+//        log.debug(msg);
+//        log.debug("usedMemInMB: " + usedMemInMB + "MB");
+//        log.debug("maxHeapSizeInMB: " + maxHeapSizeInMB + "MB");
+//        log.debug("availHeapSizeInMB: " + availHeapSizeInMB + "MB");
+
+        Bugfender.d(bugfenderTag, "Heap usage: " + usedMemInMB + "/" + maxHeapSizeInMB + "MB");
     }
 }

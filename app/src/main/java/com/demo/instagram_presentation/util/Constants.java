@@ -2,8 +2,8 @@ package com.demo.instagram_presentation.util;
 
 public class Constants {
     //Config constants
-    public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000; // in seconds
-    public static final int DEFAULT_PRESENTATION_INTERVAL = 10 * 1000; // in seconds
+    public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000; // in milliseconds
+    public static final int DEFAULT_PRESENTATION_INTERVAL = 10 * 1000; // in milliseconds
     public static final int DEFAULT_REFRESH_INTERVAL = 60; // in minutes
     public static final int DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY = 5;
 
@@ -19,7 +19,7 @@ public class Constants {
     public static final int WEB_SERVER_PORT = 8888;
     public static final String WEB_SERVER_PASSWORD = "rockiton";
     public static final int WEB_SERVER_PASSWORD_COOKIE_MAX_AGE = 365; // in days
-    public static final int NETWORK_STATUS_CHECK_DELAY = 30 * 1000;
+    public static final int NETWORK_STATUS_CHECK_DELAY = 15 * 1000;
 
     //Broadcasts constants
     public static final String PREFERENCE_CHANGED_ACTION = "PREFERENCE_CHANGED";
@@ -31,6 +31,7 @@ public class Constants {
     public static final int KEY_ADDITION_FACTOR = 1234;
     public static final String LICENSE_ID_FILENAME = "feed2wall-key-id.txt";
     public static final String LICENSE_KEY_FILENAME = "feed2wall-key.txt";
+    public static final String DEVICE_ID_FILENAME = "feed2wall-device-id.txt";
 
     //View visibility hiding/showing
     public static final int HIDE_SERVER_INFO_ON_WIFI_DELAY = 120 * 1000; //in ms
@@ -42,4 +43,10 @@ public class Constants {
     public static final int SCROLL_TIMEOUT = 60 * 1000; //ms
     public static final int SCROLL_COUNT_LIMIT = SCROLL_TIMEOUT / NEXT_SCROLLS_DELAY;
     public static final int INFINITE_SCROLL_POST_COUNT = 6 * 12;
+
+    //Bugfender constants
+    public static final String BUGFENDER_APP_TOKEN = "m8oZhIAO7JVUQGSTbVPB9yyvz3WxJJoa";
+
+    //Network config constants
+    public static final int NETWORK_SIGNAL_SCAN_INTERVAL = 10 * 1000; //ms
 }

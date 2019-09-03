@@ -9,6 +9,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.App;
 import com.demo.instagram_presentation.activity.MainActivity;
 
 import org.slf4j.Logger;
@@ -17,6 +19,7 @@ import org.slf4j.LoggerFactory;
 public class AppExceptionHandler implements Thread.UncaughtExceptionHandler {
     private Activity activity;
     private Logger log;
+    private final String bugfenderTag = App.DEVICE_ID;
 
     public AppExceptionHandler(Activity activity) {
         this.activity = activity;
@@ -25,9 +28,12 @@ public class AppExceptionHandler implements Thread.UncaughtExceptionHandler {
 
     @Override
     public void uncaughtException(@NonNull Thread thread, @NonNull Throwable throwable) {
-        log.debug("Exception caught, app will be restarted");
         String stackTrace = Log.getStackTraceString(throwable);
-        log.debug(stackTrace);
+        log.debug("Exception caught, app will be restarted");
+        log.debug(stackTrace); // Write to files
+
+        Bugfender.e(bugfenderTag, "Exception caught, app will be restarted");
+        Bugfender.d(bugfenderTag, stackTrace); // Send to Bugfender
 
         Intent intent = new Intent(activity, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
