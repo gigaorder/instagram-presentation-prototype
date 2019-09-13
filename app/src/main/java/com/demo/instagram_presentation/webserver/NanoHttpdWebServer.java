@@ -2,7 +2,7 @@ package com.demo.instagram_presentation.webserver;
 
 import android.content.Context;
 
-import com.demo.instagram_presentation.webserver.router.WebServerRouter;
+import com.demo.instagram_presentation.webserver.router.Router;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -11,12 +11,12 @@ import fi.iki.elonen.NanoHTTPD;
  * The web server is used for manipulating preferences for the app remotely via a browser
  */
 public class NanoHttpdWebServer extends NanoHTTPD {
-    private WebServerRouter router;
+    private Router router;
     public static CookieHandler cookieHandler;
 
     public NanoHttpdWebServer(Context context, int port) {
         super(port);
-        router = new WebServerRouter(context);
+        router = new Router(context);
     }
 
     @Override

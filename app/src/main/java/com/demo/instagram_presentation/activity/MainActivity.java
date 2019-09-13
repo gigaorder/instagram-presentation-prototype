@@ -36,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     String instagramSourceUrlPrefKey;
     @BindString(R.string.pref_instagram_source_tags)
     String instagramSourceTagsPrefKey;
+    @BindString(R.string.login_error_intent_key)
+    String loginErrorMsgIntentKey;
 
     private SharedPreferences sharedPreferences;
     private NanoHttpdWebServer webServer;
@@ -76,8 +78,12 @@ public class MainActivity extends AppCompatActivity {
         // Register Broadcast receivers
         wifiScanResultReceiver = new WifiScanResultReceiver();
         IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
+        IntentFilter ifLoginInfoChanged = new IntentFilter(Constants.LOGIN_INFO_CHANGED_ACTION);
+        IntentFilter ifLoginFailed = new IntentFilter(Constants.LOGIN_FAILED_ACTION);
         IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
+        registerReceiver(appPreferenceChangedReceiver, ifLoginInfoChanged);
+        registerReceiver(loginFailedReceiver, ifLoginFailed);
         registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
 
         startConfigServer();
@@ -115,6 +121,16 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private BroadcastReceiver loginFailedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.main_activity_fragment_container, new ConfigFragment(true, intent.getStringExtra(loginErrorMsgIntentKey)))
+                    .commit();
+        }
+    };
+
     @Override
     public void onBackPressed() {
         super.onBackPressed();
@@ -123,10 +139,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        finish();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         BroadcastReceiverUtil.unregisterReceiver(this, appPreferenceChangedReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, loginFailedReceiver);
         webServer.stop();
     }
 }

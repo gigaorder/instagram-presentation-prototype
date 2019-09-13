@@ -1,6 +1,7 @@
 package com.demo.instagram_presentation.fragment;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -26,7 +27,7 @@ import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.App;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.data.scraper.ScrollableWebScraper;
+import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.model.InstagramPostElement;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
@@ -45,9 +46,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -97,12 +100,18 @@ public class ImageSlideFragment extends Fragment {
     String errorFeedRequestFailed;
     @BindString(R.string.progress_getting_user_info)
     String progressGettingFeedData;
+    @BindString(R.string.progress_login)
+    String progressLogin;
     @BindString(R.string.progress_done)
     String progressDone;
     @BindString(R.string.pref_instagram_source)
     String instagramSourcePrefKey;
     @BindString(R.string.pref_instagram_source_tags)
     String instagramSourceTagsPrefKey;
+    @BindString(R.string.pref_instagram_username)
+    String instagramUsernamePrefKey;
+    @BindString(R.string.pref_instagram_password)
+    String instagramPasswordPrefKey;
     @BindString(R.string.pref_post_no)
     String postNoPrefKey;
     @BindString(R.string.pref_is_post_likes_displayed)
@@ -137,6 +146,8 @@ public class ImageSlideFragment extends Fragment {
     String presentIntervalPrefKey;
     @BindString(R.string.pref_refresh_interval)
     String refreshIntervalPrefKey;
+    @BindString(R.string.pref_required_login)
+    String requiredLoginPrefKey;
     @BindString(R.string.source_url_error)
     String sourceUrlError;
     @BindString(R.string.timer_msg_server)
@@ -155,6 +166,8 @@ public class ImageSlideFragment extends Fragment {
     private List<String> requiredHashtags;
     private String instagramSourceUrl;
     private String instagramSourceTags;
+    private String instagramUsername;
+    private String instagramPassword;
     private int numberOfPostsToDisplay;
     private int profilePicWidth;
     private int profilePicHeight;
@@ -171,7 +184,7 @@ public class ImageSlideFragment extends Fragment {
     private boolean isCaptionDisplayed;
     private boolean isProfilePicDisplayed;
     private boolean isUsernameDisplayed;
-    private ScrollableWebScraper scrollableWebScraper;
+    private InstagramWebScraper instagramWebScraper;
     private Set<InstagramPostElement> postElementSet;
     private List<InstagramPost> instagramPosts;
     private List<InstagramPost> newInstagramPosts;
@@ -203,6 +216,8 @@ public class ImageSlideFragment extends Fragment {
     private final Runtime runtime = Runtime.getRuntime();
     private final String bugfenderTag = App.DEVICE_ID;
 
+    private Context context;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -211,6 +226,9 @@ public class ImageSlideFragment extends Fragment {
         requestQueue = Volley.newRequestQueue(getContext());
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         jsonParser = new JsonParser();
+
+        // Bind context
+        context = getContext();
     }
 
     @Override
@@ -239,15 +257,18 @@ public class ImageSlideFragment extends Fragment {
         // Source URL is not empty -> fetch by URL, filter hashtags
         else if (!instagramSourceUrl.trim().isEmpty()) {
             fetchByHashtags = false;
-            sourceUrl = instagramSourceUrl;
+            sourceUrl = InstagramUtil.normalizeUserUrl(instagramSourceUrl);
         }
         // Source URL is empty + Source hashtags is not empty -> fetch by hashtags
         else {
             fetchByHashtags = true;
             // If source URL is empty, only 1 hashtag is allowed on config website
-            sourceUrl = InstagramUtil.constructInstagramHashtagQuery(instagramSourceTags);
+            sourceUrl = InstagramUtil.constructInstagramHashtagQueryUrl(instagramSourceTags);
         }
 
+        instagramWebScraper = new InstagramWebScraper(webView, instagramUsername, instagramPassword, sourceUrl);
+        instagramWebScraper.configWebView();
+        instagramWebScraper.setInstagramLoginListener(loginListener);
         startFetchingPosts();
 
         return fragmentRootView;
@@ -263,41 +284,40 @@ public class ImageSlideFragment extends Fragment {
                 @Override
                 public void run() {
                     requestQueue.add(new StringRequest(sourceUrl,
-                            success -> {
-                                instagramPosts = new ArrayList<>();
-                                newInstagramPosts = new ArrayList<>();
-                                nextSlideIndex = 0;
+                        success -> {
+                            instagramPosts = new ArrayList<>();
+                            newInstagramPosts = new ArrayList<>();
+                            nextSlideIndex = 0;
 
-                                txtError.setVisibility(View.GONE);
-                                txtProgress.setText(progressGettingFeedData);
-                                txtProgress.setVisibility(View.VISIBLE);
-                                progressBar.setProgress(0);
-                                progressBar.setMax(numberOfPostsToDisplay);
+                            txtError.setVisibility(View.GONE);
+                            txtProgress.setVisibility(View.VISIBLE);
+                            txtProgress.setText(progressGettingFeedData);
+                            progressBar.setProgress(0);
+                            progressBar.setMax(numberOfPostsToDisplay);
 
-                                // Start scraper to get posts of user
-                                scrollableWebScraper = new ScrollableWebScraper(webView, sourceUrl);
-                                scrollableWebScraper.setHtmlExtractionListener(initialHtmlListener);
+                            // Start scraper to get posts of user
+                            instagramWebScraper.setHtmlExtractionListener(initialHtmlListener);
+                            instagramWebScraper.startScrapingInstagram();
 
-                                if (!fetchByHashtags) getUserInfo();
+                            if (!fetchByHashtags) getUserInfo();
 
-                                initScraperVariables();
-                                scrollableWebScraper.start();
-                                Bugfender.d(bugfenderTag, "Initial request success, web scraper will be started");
-                                logMemory();
-                            },
-                            err -> {
-                                if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
-                                    Bugfender.e(bugfenderTag, "Initial request failed due to 404 error, Instagram source may be invalid");
-                                    txtError.setVisibility(View.VISIBLE);
-                                    txtError.setText(errorInvalidSourceUrl);
-                                } else {
-                                    // Retry
-                                    Bugfender.e(bugfenderTag, "Initial request failed due to network error, retrying...");
-                                    handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
-                                    startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
-                                }
-                                Bugfender.e(bugfenderTag, "Initial request error: " + err.getMessage());
-                            }));
+                            initScraperVariables();
+                            Bugfender.d(bugfenderTag, "Initial request success, web scraper will be started");
+                            logMemory();
+                        },
+                        err -> {
+                            if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
+                                Bugfender.e(bugfenderTag, "Initial request failed due to 404 error, Instagram source may be invalid");
+                                txtError.setVisibility(View.VISIBLE);
+                                txtError.setText(errorInvalidSourceUrl);
+                            } else {
+                                // Retry
+                                Bugfender.e(bugfenderTag, "Initial request failed due to network error, retrying...");
+                                handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                                startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
+                            }
+                            Bugfender.e(bugfenderTag, "Initial request error: " + err.getMessage());
+                        }));
                 }
             });
         }
@@ -313,21 +333,20 @@ public class ImageSlideFragment extends Fragment {
                     imgNetworkStrength.setVisibility(View.VISIBLE);
                 } else {
                     requestQueue.add(new StringRequest(sourceUrl,
-                            success -> {
-                                Bugfender.d(bugfenderTag, "Refresh request success");
-                                initScraperVariables();
-                                scrollableWebScraper.setHtmlExtractionListener(refreshHtmlListener);
-
-                                scrollableWebScraper.start();
-                                imgNetworkStrength.setVisibility(View.GONE);
-                            },
-                            // In case internet is unavailable when the task is running
-                            err -> {
-                                Bugfender.e(bugfenderTag, "Refresh request failed, retrying... ");
-                                Bugfender.e(bugfenderTag, "Refresh request error: " + err.getMessage());
-                                handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
-                                imgNetworkStrength.setVisibility(View.VISIBLE);
-                            }));
+                        success -> {
+                            Bugfender.d(bugfenderTag, "Refresh request success");
+                            initScraperVariables();
+                            instagramWebScraper.setHtmlExtractionListener(refreshHtmlListener);
+                            instagramWebScraper.startScrapingInstagram();
+                            imgNetworkStrength.setVisibility(View.GONE);
+                        },
+                        // In case internet is unavailable when the task is running
+                        err -> {
+                            Bugfender.e(bugfenderTag, "Refresh request failed, retrying... ");
+                            Bugfender.e(bugfenderTag, "Refresh request error: " + err.getMessage());
+                            handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                            imgNetworkStrength.setVisibility(View.VISIBLE);
+                        }));
                 }
             }
         }, ms);
@@ -337,26 +356,26 @@ public class ImageSlideFragment extends Fragment {
         String url = InstagramUtil.constructInstagramUserInfoUrl(instagramSourceUrl);
 
         requestQueue.add(new StringRequest(url,
-                response -> {
-                    JsonObject userInfo = jsonParser.parse(response)
-                            .getAsJsonObject().get("graphql")
-                            .getAsJsonObject().get("user")
-                            .getAsJsonObject();
+            response -> {
+                JsonObject userInfo = jsonParser.parse(response)
+                        .getAsJsonObject().get("graphql")
+                        .getAsJsonObject().get("user")
+                        .getAsJsonObject();
 
-                    feedMaxNumberOfPosts = userInfo.get("edge_owner_to_timeline_media")
-                            .getAsJsonObject().get("count")
-                            .getAsInt();
+                feedMaxNumberOfPosts = userInfo.get("edge_owner_to_timeline_media")
+                        .getAsJsonObject().get("count")
+                        .getAsInt();
 
-                    lastInstagramUsername = userInfo.get("username").getAsString();
-                    txtUsername.setText(lastInstagramUsername);
+                lastInstagramUsername = userInfo.get("username").getAsString();
+                txtUsername.setText(lastInstagramUsername);
 
-                    lastUserProfilePicUrl = userInfo.get("profile_pic_url_hd").getAsString();
-                    Picasso.get()
-                            .load(lastUserProfilePicUrl)
-                            .fit()
-                            .centerCrop()
-                            .into(imgProfile);
-                }, error -> Log.e("Error", error.toString())));
+                lastUserProfilePicUrl = userInfo.get("profile_pic_url_hd").getAsString();
+                Picasso.get()
+                        .load(lastUserProfilePicUrl)
+                        .fit()
+                        .centerCrop()
+                        .into(imgProfile);
+            }, error -> Log.e("Error", error.toString())));
     }
 
     private void initScraperVariables() {
@@ -540,6 +559,8 @@ public class ImageSlideFragment extends Fragment {
         // Data configs
         instagramSourceUrl = sharedPreferences.getString(instagramSourcePrefKey, "");
         instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, "");
+        instagramUsername = sharedPreferences.getString(instagramUsernamePrefKey, "");
+        instagramPassword = sharedPreferences.getString(instagramPasswordPrefKey, "");
         numberOfPostsToDisplay = getIntValueFromPref(postNoPrefKey, Constants.DEFAULT_NUMBER_OF_POSTS_TO_DISPLAY);
         isLikesDisplayed = sharedPreferences.getBoolean(isLikesDisplayedPrefKey, true);
         isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
@@ -680,7 +701,30 @@ public class ImageSlideFragment extends Fragment {
         handler.removeCallbacks(imagePresentationLoader);
     }
 
-    private ScrollableWebScraper.HtmlExtractionListener initialHtmlListener = html -> {
+    private InstagramWebScraper.InstagramLoginListener loginListener = (success, loginErrorReason) -> {
+        if (success) {
+            SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+            prefEditor.putBoolean(requiredLoginPrefKey, false);
+            prefEditor.apply();
+            startFetchingPosts();
+        } else {
+            Bugfender.e(bugfenderTag, "Login failed");
+            SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+            prefEditor.putBoolean(requiredLoginPrefKey, true);
+            prefEditor.apply();
+
+            handler.removeCallbacks(imagePresentationLoader);
+
+            Intent loginFailedIntent = new Intent(Constants.LOGIN_FAILED_ACTION);
+            loginFailedIntent.putExtra(context.getResources().getString(R.string.login_error_intent_key), loginErrorReason);
+            context.sendBroadcast(loginFailedIntent);
+        }
+    };
+
+    private InstagramWebScraper.HtmlExtractionListener initialHtmlListener = html -> {
+        SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+        prefEditor.putBoolean(requiredLoginPrefKey, false);
+        prefEditor.apply();
         if (progressBar.getVisibility() == View.GONE && !maxNumberOfPostsReached) {
             progressBar.setVisibility(View.VISIBLE);
         }
@@ -712,15 +756,15 @@ public class ImageSlideFragment extends Fragment {
                     String postHref = postElement.getElement().attr("href");
 
                     requestQueue.add(new StringRequest("https://instagram.com" + postHref,
-                            // Success listener
-                            instagramPostHtml -> {
-                                //Mark the element as requested -> won't be processed in the next iteration
-                                postElement.setRequested(true);
-                                InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
-                                onInstagramPostRequestSuccess(post);
-                            },
-                            // Error listener
-                            error -> shiftStartPostIndex(index)));
+                        // Success listener
+                        instagramPostHtml -> {
+                            //Mark the element as requested -> won't be processed in the next iteration
+                            postElement.setRequested(true);
+                            InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                            onInstagramPostRequestSuccess(post);
+                        },
+                        // Error listener
+                        error -> shiftStartPostIndex(index)));
                 }
             }
         } else {
@@ -730,14 +774,17 @@ public class ImageSlideFragment extends Fragment {
         lastNumberOfPosts = postElementSet.size();
         if (currentNumberOfPosts == 0) {
             // Wait for the page to be fully loaded the first time -> less delay
-            scrollableWebScraper.scrollToBottomWithDelay(Constants.FIRST_SCROLL_DELAY);
+            instagramWebScraper.continueGettingPosts(Constants.FIRST_SCROLL_DELAY);
         } else {
             // Delay to wait for requests to be finished -> avoid requesting redundantly
-            scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
+            instagramWebScraper.continueGettingPosts(Constants.NEXT_SCROLLS_DELAY);
         }
     };
 
-    private ScrollableWebScraper.HtmlExtractionListener refreshHtmlListener = html -> {
+    private InstagramWebScraper.HtmlExtractionListener refreshHtmlListener = html -> {
+        SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+        prefEditor.putBoolean(requiredLoginPrefKey, false);
+        prefEditor.apply();
         if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
             Bugfender.d(bugfenderTag, "Finished fetching posts");
             logMemory();
@@ -808,10 +855,10 @@ public class ImageSlideFragment extends Fragment {
         lastNumberOfPosts = postElementSet.size();
         if (currentNumberOfPosts == 0) {
             // Wait for the page to be fully loaded the first time -> less delay
-            scrollableWebScraper.scrollToBottomWithDelay(Constants.FIRST_SCROLL_DELAY);
+            instagramWebScraper.continueGettingPosts(Constants.FIRST_SCROLL_DELAY);
         } else {
             // Delay to wait for requests to be finished -> avoid requesting redundantly
-            scrollableWebScraper.scrollToBottomWithDelay(Constants.NEXT_SCROLLS_DELAY);
+            instagramWebScraper.continueGettingPosts(Constants.NEXT_SCROLLS_DELAY);
         }
     };
 
@@ -819,18 +866,22 @@ public class ImageSlideFragment extends Fragment {
         handler.post(new Runnable() {
             @Override
             public void run() {
-                int networkStrength = NetworkUtil.getNetworkStrength(5);
-                String packageName = BuildConfig.APPLICATION_ID;
-                String drawableName = "ic_signal_wifi_" + networkStrength + "_bar_black_48dp";
+                try {
+                    int networkStrength = NetworkUtil.getNetworkStrength(5);
+                    String packageName = BuildConfig.APPLICATION_ID;
+                    String drawableName = "ic_signal_wifi_" + networkStrength + "_bar_black_48dp";
 
-                int drawableId = getResources().getIdentifier(packageName + ":drawable/" + drawableName, null, null);
-                imgNetworkStrength.setImageDrawable(getResources().getDrawable(drawableId));
+                    int drawableId = getResources().getIdentifier(packageName + ":drawable/" + drawableName, null, null);
+                    imgNetworkStrength.setImageDrawable(getResources().getDrawable(drawableId));
 
-                if (imgNetworkStrength.getVisibility() == View.GONE) {
-                    imgNetworkStrength.setVisibility(View.VISIBLE);
+                    if (imgNetworkStrength.getVisibility() == View.GONE) {
+                        imgNetworkStrength.setVisibility(View.VISIBLE);
+                    }
+                } catch (Exception e) {
+                    Bugfender.e(bugfenderTag, "Failed while scanning network strength");
+                } finally {
+                    handler.postDelayed(this, intervalInMs);
                 }
-
-                handler.postDelayed(this, intervalInMs);
             }
         });
     }

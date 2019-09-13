@@ -19,12 +19,16 @@
 
     <string name="timer_msg_server">This message will disappear in %d seconds</string>
     <string name="timer_msg_retry">Can not get data from Instagram\nRetrying in %d seconds</string>
+    <string name="progress_login">Logging in Instagram</string>
     <string name="progress_getting_user_info">Getting data from Instagram</string>
     <string name="progress_done">All done!</string>
 
     <!--Preferences keys, summaries and titles-->
     <string name="pref_instagram_source">instagram_source</string>
     <string name="pref_instagram_source_tags">instagram_source_tags</string>
+    <string name="pref_instagram_username">instagram_username</string>
+    <string name="pref_instagram_password">instagram_password</string>
+    <string name="pref_instagram_authenticated">instagram_authenticated</string>
     <string name="pref_excluded_hashtags">excluded_hashtags</string>
     <string name="pref_post_no">post_no</string>
     <string name="pref_is_profile_pic_displayed">is_profile_pic_displayed</string>
@@ -61,7 +65,11 @@
     <string name="pref_caption_text_size">caption_text_size</string>
     <string name="pref_present_interval">present_interval</string>
     <string name="pref_refresh_interval">refresh_interval</string>
+    <string name="pref_required_login">required_login</string>
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
     <string name="pref_app_id">app_id</string>
+
+    <!--Intent keys-->
+    <string name="login_error_intent_key">loginErrorMsg</string>
 </resources>

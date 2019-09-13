@@ -80,6 +80,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     String instagramSourceUrlPrefKey;
     @BindString(R.string.pref_instagram_source_tags)
     String instagramSourceTagsPrefKey;
+    @BindString(R.string.pref_required_login)
+    String requiredLoginPrefKey;
     @BindString(R.string.app_info_text)
     String appInfoMsg;
 
@@ -94,6 +96,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private ConfigFragment thisFragment;
     private String instagramSourceUrl;
     private String instagramSourceTags;
+    private boolean isRequiredLogin;
+    private String loginErrorMsg;
 
     public ConfigFragment() {
     }
@@ -102,6 +106,10 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         this.configServerStarted = configServerStarted;
     }
 
+    public ConfigFragment(boolean configServerStarted, String loginErrorMsg) {
+        this.configServerStarted = configServerStarted;
+        this.loginErrorMsg = loginErrorMsg;
+    }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -120,6 +128,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         wifiManager = (WifiManager) rootActivity.getApplicationContext().getSystemService(WIFI_SERVICE);
         instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
         instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
+        isRequiredLogin = sharedPreferences.getBoolean(requiredLoginPrefKey, false);
 
         AppPreferencesUtil.setDefaultImageSize(rootActivity);
 
@@ -136,7 +145,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
             @Override
             public void onFinish() {
-                if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+                if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null) && !isRequiredLogin) {
                     // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
                     getFragmentManager()
                             .beginTransaction()
@@ -146,7 +155,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                     if (configServerStarted) {
                         if (NetworkUtil.isWifiConnected()) {
                             setServerInfoOnWifi();
-                            txtError.setText(errorSourceUrlNotSet);
+                            setErrorMsg();
                         } else {
                             wifiConnected = false;
 
@@ -171,8 +180,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                             wifiManager.startScan();
                         }
                     } else {
-                        txtError.setText(configServerCantStartMsg);
-                        txtError.setVisibility(View.VISIBLE);
+                        setErrorMsg();
                         txtTimer.setVisibility(View.GONE);
                     }
                 }
@@ -180,6 +188,17 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         }.start();
 
         return fragmentRootView;
+    }
+
+    private void setErrorMsg() {
+        txtError.setVisibility(View.VISIBLE);
+        if (!configServerStarted) {
+            txtError.setText(configServerCantStartMsg);
+        } else if (instagramSourceUrl == null && instagramSourceTags == null) {
+            txtError.setText(errorSourceUrlNotSet);
+        } else if (isRequiredLogin) {
+            txtError.setText(loginErrorMsg);
+        }
     }
 
     private void hideServerInfoText() {
@@ -301,7 +320,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                             .commit();
                 } else {
                     setServerInfoOnWifi();
-                    txtError.setText(errorSourceUrlNotSet);
+                    setErrorMsg();
                 }
             }, 10000);
         }

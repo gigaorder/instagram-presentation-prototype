@@ -17,12 +17,14 @@ public class Constants {
 
     //Web server configs
     public static final int WEB_SERVER_PORT = 8888;
-    public static final String WEB_SERVER_PASSWORD = "rockiton";
-    public static final int WEB_SERVER_PASSWORD_COOKIE_MAX_AGE = 365; // in days
+    public static final String AUTHORIZATION_KEY = "rockiton";
+    public static final int AUTHORIZATION_KEY_COOKIE_MAX_AGE = 365; // in days
     public static final int NETWORK_STATUS_CHECK_DELAY = 15 * 1000;
 
     //Broadcasts constants
     public static final String PREFERENCE_CHANGED_ACTION = "PREFERENCE_CHANGED";
+    public static final String LOGIN_INFO_CHANGED_ACTION = "LOGIN_INFO_CHANGED";
+    public static final String LOGIN_FAILED_ACTION = "LOGIN_FAILED";
 
     //License key constants
     public static final int BASE_KEY_SEED_MINIMUM_VALUE = 100;
@@ -49,4 +51,10 @@ public class Constants {
 
     //Network config constants
     public static final int NETWORK_SIGNAL_SCAN_INTERVAL = 10 * 1000; //ms
+
+    // Instagram web constants
+    public static final String BASE_URL = "https://www.instagram.com/";
+    public static final String LOGIN_URL = BASE_URL + "accounts/login/";
+    public static final String LOGINPAGE_TITLE = "Login • Instagram";
+    public static final String HOMEPAGE_TITLE = "Instagram";
 }

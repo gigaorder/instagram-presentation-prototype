@@ -1,5 +1,7 @@
 package com.demo.instagram_presentation.util;
 
+import android.util.Log;
+
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -7,6 +9,8 @@ import com.google.gson.JsonParser;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+
+import java.util.Locale;
 
 public class InstagramUtil {
     private static JsonParser jsonParser;
@@ -21,8 +25,24 @@ public class InstagramUtil {
         return instagramSourceUrl;
     }
 
-    public static String constructInstagramHashtagQuery(String hashtag) {
-        return "https://www.instagram.com/explore/tags/" + hashtag.substring(1);
+    public static String normalizeUserUrl(String instagramSourceUrl) {
+        String[] urlParts =  instagramSourceUrl.split("/+");
+        String userPath;
+        if (urlParts[urlParts.length - 1].isEmpty()) {
+            userPath = urlParts[urlParts.length - 2];
+        } else {
+            userPath = urlParts[urlParts.length - 1];
+        }
+
+        return String.format(Locale.ENGLISH, "https://www.instagram.com/%s/", userPath);
+    }
+
+    public static String constructInstagramHashtagQueryUrl(String hashtag) {
+        String tag = hashtag.substring(1);
+        if (!tag.endsWith("/")) {
+            tag = tag.concat("/");
+        }
+        return "https://www.instagram.com/explore/tags/" + tag;
     }
 
     public static InstagramPost parseInstagramPostHtml(String html, int postIndex, String postHref) {
