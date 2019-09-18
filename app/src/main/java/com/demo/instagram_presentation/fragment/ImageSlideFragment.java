@@ -24,7 +24,6 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
-import com.demo.instagram_presentation.App;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
@@ -32,6 +31,7 @@ import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.model.InstagramPostElement;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.Constants;
+import com.demo.instagram_presentation.util.DeviceInfoUtil;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
@@ -211,7 +211,7 @@ public class ImageSlideFragment extends Fragment {
     private int scrollCount;
 
     private final Runtime runtime = Runtime.getRuntime();
-    private final String bugfenderTag = App.DEVICE_ID;
+    private final String bugfenderTag = DeviceInfoUtil.getDeviceId();
 
     private Context context;
 

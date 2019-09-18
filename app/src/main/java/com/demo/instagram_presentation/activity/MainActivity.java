@@ -12,8 +12,10 @@ import android.view.WindowManager;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
 
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.hotfix_plugin.PermissionUtil;
 import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ConfigFragment;
@@ -99,6 +101,10 @@ public class MainActivity extends AppCompatActivity {
                     .replace(R.id.main_activity_fragment_container, new ConfigFragment(configServerStarted))
                     .commit();
         }
+
+        // Ask for read and write external storage permission
+        PermissionUtil.setActivity(this);
+        PermissionUtil.askForStoragePermissions();
     }
 
     private void startConfigServer() {
