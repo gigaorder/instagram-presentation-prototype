@@ -45,7 +45,7 @@ public class AuthorizationController {
 
     public NanoHTTPD.Response isUserAuthorized() {
         CookieHandler cookieHandler = NanoHttpdWebServer.cookieHandler;
-        String password = cookieHandler.read("web-server-password");
+        String password = cookieHandler.read("authorization-key");
         boolean isAuthorized = false;
 
         if (password != null && password.equals(Constants.AUTHORIZATION_KEY)) {

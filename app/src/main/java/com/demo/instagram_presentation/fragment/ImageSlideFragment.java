@@ -55,6 +55,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import butterknife.BindString;
 import butterknife.BindView;
@@ -186,6 +188,7 @@ public class ImageSlideFragment extends Fragment {
     private boolean isUsernameDisplayed;
     private InstagramWebScraper instagramWebScraper;
     private Set<InstagramPostElement> postElementSet;
+    private Set<InstagramPost> instagramPostsSet;
     private List<InstagramPost> instagramPosts;
     private List<InstagramPost> newInstagramPosts;
     private boolean maxNumberOfPostsReached;
@@ -201,18 +204,12 @@ public class ImageSlideFragment extends Fragment {
     private boolean fetchByHashtags;
 
     /**
-     * The number of posts user's Instagram feed has
-     */
-    private int feedMaxNumberOfPosts;
-
-    /**
      * Count the number of times the webView scrolls but no new content is found
      * -> it can be due to network error or the webView has scrolled to the end
      * If the count exceeds a limit -> stop scrolling (scroll timeout)
      */
     private int scrollCount;
 
-    private Logger log = LoggerFactory.getLogger(ImageSlideFragment.class);
     private final Runtime runtime = Runtime.getRuntime();
     private final String bugfenderTag = App.DEVICE_ID;
 
@@ -299,8 +296,6 @@ public class ImageSlideFragment extends Fragment {
                             instagramWebScraper.setHtmlExtractionListener(initialHtmlListener);
                             instagramWebScraper.startScrapingInstagram();
 
-                            if (!fetchByHashtags) getUserInfo();
-
                             initScraperVariables();
                             Bugfender.d(bugfenderTag, "Initial request success, web scraper will be started");
                             logMemory();
@@ -352,32 +347,6 @@ public class ImageSlideFragment extends Fragment {
         }, ms);
     }
 
-    private void getUserInfo() {
-        String url = InstagramUtil.constructInstagramUserInfoUrl(instagramSourceUrl);
-
-        requestQueue.add(new StringRequest(url,
-            response -> {
-                JsonObject userInfo = jsonParser.parse(response)
-                        .getAsJsonObject().get("graphql")
-                        .getAsJsonObject().get("user")
-                        .getAsJsonObject();
-
-                feedMaxNumberOfPosts = userInfo.get("edge_owner_to_timeline_media")
-                        .getAsJsonObject().get("count")
-                        .getAsInt();
-
-                lastInstagramUsername = userInfo.get("username").getAsString();
-                txtUsername.setText(lastInstagramUsername);
-
-                lastUserProfilePicUrl = userInfo.get("profile_pic_url_hd").getAsString();
-                Picasso.get()
-                        .load(lastUserProfilePicUrl)
-                        .fit()
-                        .centerCrop()
-                        .into(imgProfile);
-            }, error -> Log.e("Error", error.toString())));
-    }
-
     private void initScraperVariables() {
         postElementSet = new LinkedHashSet<>();
         maxNumberOfPostsReached = false;
@@ -390,6 +359,7 @@ public class ImageSlideFragment extends Fragment {
             instagramPosts = new ArrayList<>();
             startPostIndex = 0;
         }
+        instagramPostsSet = new LinkedHashSet<>();
     }
 
     private void onInstagramPostRequestSuccess(InstagramPost instagramPost) {
@@ -414,7 +384,7 @@ public class ImageSlideFragment extends Fragment {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
             progressBar.setProgress(instagramPosts.size() + 1);
 
-            if (checkPostLimit(instagramPosts)) {
+            if (checkPostLimit(instagramPosts) || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
                 hideProgress();
                 webView.loadUrl("about:blank");
                 maxNumberOfPostsReached = true;
@@ -436,7 +406,7 @@ public class ImageSlideFragment extends Fragment {
     }
 
     private boolean checkPostLimit(List<InstagramPost> posts) {
-        return posts.size() >= numberOfPostsToDisplay || posts.size() == feedMaxNumberOfPosts;
+        return posts.size() >= numberOfPostsToDisplay;
     }
 
     private void startImagePresentation() {
@@ -458,6 +428,8 @@ public class ImageSlideFragment extends Fragment {
                 }
 
                 InstagramPost post = instagramPosts.get(index);
+
+                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
                 Picasso.get()
                         .load(post.getImgUrl())
@@ -761,7 +733,13 @@ public class ImageSlideFragment extends Fragment {
                             //Mark the element as requested -> won't be processed in the next iteration
                             postElement.setRequested(true);
                             InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
-                            onInstagramPostRequestSuccess(post);
+
+                            int beforeAddSize = instagramPostsSet.size();
+                            instagramPostsSet.add(post);
+                            int afterAddSize = instagramPostsSet.size();
+                            if (beforeAddSize < afterAddSize) {
+                                onInstagramPostRequestSuccess(post);
+                            }
                         },
                         // Error listener
                         error -> shiftStartPostIndex(index)));
@@ -792,18 +770,8 @@ public class ImageSlideFragment extends Fragment {
 
             if (!newInstagramPosts.isEmpty()) {
                 Collections.sort(newInstagramPosts);
-
-                String currentPostHref = instagramPosts.get(nextSlideIndex).getPostHref();
-                for (int i = 0; i < newInstagramPosts.size(); i++) {
-                    if (currentPostHref.equals(newInstagramPosts.get(i).getPostHref())) {
-                        nextSlideIndex = i;
-                    }
-                }
-
-                instagramPosts = new ArrayList<>();
+                instagramPosts.clear();
                 instagramPosts.addAll(newInstagramPosts);
-
-                startImagePresentation();
             }
             startRefreshTaskAfter(refreshInterval);
             return;
@@ -837,11 +805,17 @@ public class ImageSlideFragment extends Fragment {
                                 //Mark the element as requested -> won't be processed in the next iteration
                                 postElement.setRequested(true);
                                 InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
-                                if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
-                                    newInstagramPosts.add(post);
-                                    Picasso.get().load(post.getImgUrl()).resize(imgMainWidth, imgMainHeight).centerCrop().fetch();
-                                    Picasso.get().load(post.getUserProfilePicUrl()).fetch();
-                                    maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
+
+                                int beforeAddSize = instagramPostsSet.size();
+                                instagramPostsSet.add(post);
+                                int afterAddSize = instagramPostsSet.size();
+                                if (beforeAddSize < afterAddSize) {
+                                    if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
+                                        newInstagramPosts.add(post);
+                                        Picasso.get().load(post.getImgUrl()).resize(imgMainWidth, imgMainHeight).centerCrop().fetch();
+                                        Picasso.get().load(post.getUserProfilePicUrl()).fetch();
+                                        maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
+                                    }
                                 }
                             },
                             // Error listener

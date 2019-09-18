@@ -19,10 +19,12 @@ public class InstagramPostsGetter {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String webViewUrl) {
-                if (webViewUrl.equals(pageUrlToFetch) || webViewUrl.equals("about:blank")) {
-                    fetchPageListener.onFinish(false);
+                if (webViewUrl.equals(pageUrlToFetch)) {
+                    fetchPageListener.onFinish(false, true);
+                } else if (webViewUrl.equals("about:blank")) {
+                    fetchPageListener.onFinish(false, false);
                 } else {
-                    fetchPageListener.onFinish(true);
+                    fetchPageListener.onFinish(true, false);
                 }
             }
         });
@@ -45,7 +47,7 @@ public class InstagramPostsGetter {
     }
 
     public interface FetchPageListener {
-        void onFinish(boolean redirected);
+        void onFinish(boolean redirected, boolean startGettingPost);
     }
 
     public interface GetPostsListener {

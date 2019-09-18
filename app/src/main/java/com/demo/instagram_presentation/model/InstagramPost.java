@@ -1,5 +1,7 @@
 package com.demo.instagram_presentation.model;
 
+import java.util.Objects;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -18,6 +20,19 @@ public class InstagramPost implements Comparable<InstagramPost> {
     @Override
     public int compareTo(InstagramPost instagramPost) {
         return Integer.compare(index, instagramPost.getIndex());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        InstagramPost that = (InstagramPost) o;
+        return Objects.equals(this.imgUrl, that.imgUrl);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(imgUrl);
     }
 
     @Override

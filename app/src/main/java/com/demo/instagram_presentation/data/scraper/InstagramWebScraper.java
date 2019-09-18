@@ -28,7 +28,7 @@ public class InstagramWebScraper {
     }
 
     public void startScrapingInstagram() {
-        instagramPostsGetter.fetchPage((redirected) -> {
+        instagramPostsGetter.fetchPage((redirected, startGettingPost) -> {
             if (redirected) {
                 instagramLogin.executeLoginInstagram((loginStatus) -> {
                     if (loginStatus.success) {
@@ -37,7 +37,7 @@ public class InstagramWebScraper {
                         instagramLoginListener.onFinish(false, loginStatus.message);
                     }
                 });
-            } else {
+            } else if (startGettingPost) {
                 instagramPostsGetter.getHtmlContent(html -> htmlExtractionListener.onHtmlExtracted(html), 0);
             }
         });
