@@ -7,15 +7,8 @@ buildscript {
 
     }
     dependencies {
-        if (project.hasProperty('GRADLE_3') && GRADLE_3.equalsIgnoreCase('TRUE')) {
-            classpath 'com.android.tools.build:gradle:3.1.3'
-        } else {
-            classpath 'com.android.tools.build:gradle:2.3.3'
-        }
-        classpath("com.tencent.tinker:tinker-patch-gradle-plugin:${TINKER_VERSION}") {
-            changing = TINKER_VERSION?.endsWith("-SNAPSHOT")
-            exclude group: 'com.android.tools.build', module: 'gradle'
-        }
+        classpath 'com.android.tools.build:gradle:3.1.3'
+        classpath "com.tencent.tinker:tinker-patch-gradle-plugin:1.9.14"
         classpath 'com.google.gms:google-services:4.2.0'
     }
     configurations.all {
@@ -33,8 +26,4 @@ allprojects {
 
 task clean(type: Delete) {
     delete rootProject.buildDir
-}
-
-def is_gradle_3() {
-    return hasProperty('GRADLE_3') && GRADLE_3.equalsIgnoreCase('TRUE')
 }

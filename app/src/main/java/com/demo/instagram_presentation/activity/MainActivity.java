@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -27,6 +28,7 @@ import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.io.IOException;
 
@@ -78,14 +80,16 @@ public class MainActivity extends AppCompatActivity {
         String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
 
         // Register Broadcast receivers
-        wifiScanResultReceiver = new WifiScanResultReceiver();
         IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
-        IntentFilter ifLoginInfoChanged = new IntentFilter(Constants.LOGIN_INFO_CHANGED_ACTION);
-        IntentFilter ifLoginFailed = new IntentFilter(Constants.LOGIN_FAILED_ACTION);
-        IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
+        IntentFilter ifLoginInfoChanged = new IntentFilter(Constants.LOGIN_INFO_CHANGED_ACTION);
         registerReceiver(appPreferenceChangedReceiver, ifLoginInfoChanged);
+
+        IntentFilter ifLoginFailed = new IntentFilter(Constants.LOGIN_FAILED_ACTION);
         registerReceiver(loginFailedReceiver, ifLoginFailed);
+
+        wifiScanResultReceiver = new WifiScanResultReceiver();
+        IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
 
         startConfigServer();
@@ -102,9 +106,7 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
         }
 
-        // Ask for read and write external storage permission
-        PermissionUtil.setActivity(this);
-        PermissionUtil.askForStoragePermissions();
+        hotfixPluginSetup();
     }
 
     private void startConfigServer() {
@@ -115,6 +117,14 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void hotfixPluginSetup() {
+        // Ask for read and write external storage permission
+        PermissionUtil.setActivity(this);
+        PermissionUtil.askForStoragePermissions();
+
+        FirebaseMessaging.getInstance().subscribeToTopic("instagramPatching");
     }
 
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {

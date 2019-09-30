@@ -1,13 +1,14 @@
 package com.demo.instagram_presentation.hotfix_plugin;
 
 import android.os.Environment;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.DeviceInfoUtil;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import com.tencent.tinker.lib.library.TinkerLoadLibrary;
@@ -34,8 +35,10 @@ public class PatchingService extends FirebaseMessagingService {
         String command = remoteMessage.getData().get("command");
         switch (command) {
             case LOAD_PATCH:
+                Bugfender.d(TAG, "Load patch");
                 if (PermissionUtil.hasStoragePermissions()) {
-                    String apkUrl = remoteMessage.getData().get("download_path");
+                    String domain = remoteMessage.getData().get("domain");
+                    String apkUrl = String.format("%s/static-apk/%s/%s", domain, BuildConfig.VERSION_NAME, Constants.APK_NAME);
                     String apkPath = Environment.getExternalStorageDirectory().getAbsolutePath() +"/" + Constants.APK_NAME;
                     downloadApk((success) -> {
                         if (success) {
@@ -49,13 +52,16 @@ public class PatchingService extends FirebaseMessagingService {
                 }
                 break;
             case LOAD_LIBRARY:
+                Bugfender.d(TAG, "Load library");
                 TinkerLoadLibrary.installNavitveLibraryABI(getApplicationContext(), "armeabi");
                 System.loadLibrary("stlport_shared");
                 break;
             case CLEAN_PATCH:
+                Bugfender.d(TAG, "Clean patch");
                 Tinker.with(getApplicationContext()).cleanPatch();
                 break;
             case KILL_PROCESS:
+                Bugfender.d(TAG, "Kill process");
                 ShareTinkerInternals.killAllOtherProcess(getApplicationContext());
                 android.os.Process.killProcess(android.os.Process.myPid());
                 break;
