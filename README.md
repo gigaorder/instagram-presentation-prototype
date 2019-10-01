@@ -1,82 +1,118 @@
-# Import google-services.json
+## Import google-services.json
 To run the project you need to create a firebase project and generate <b>google-service.json</b> for android app:
-1. Go to [Firebase console](https://console.firebase.google.com/), click <b>Add project</b>
+1. Go to [Firebase console](https://console.firebase.google.com/), click <b>Add project</b>  
     <img src="https://i.imgur.com/uNXKg5k.png" width="400" />
 2. Enter your project name and finish creating project
-3. In dashboard page, click on android icon
+3. In dashboard page, click on android icon  
     <img src="https://i.imgur.com/mpudbyL.png" width="400" />
-4. Register app and download config file, then put it inside <b>app</b> folder of the project
+4. Register app and download config file, then put it inside <b>app</b> folder of the project  
     <img src="https://i.imgur.com/GYPTry9.png" width="400" />
 
-# Tinker patch implementation
-
 ## Setup
-Add tinker-gradle-plugin as a dependency in your main `build.gradle` in the root of your project  
+1. Add tinker-gradle-plugin as a dependency in your main `build.gradle` in the root of your project  
 Gradle version should be <b>3.1.3</b> to avoid warning message when building project (because tinker does not support for java 8 or higher)
 
-```gradle
-buildscript {
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.3'
-        classpath 'com.tencent.tinker:tinker-patch-gradle-plugin:1.9.14'
+    ```gradle
+    buildscript {
+        dependencies {
+            classpath 'com.android.tools.build:gradle:3.1.3'
+            classpath 'com.tencent.tinker:tinker-patch-gradle-plugin:1.9.14'
+        }
     }
-}
-```
+    ```
 
-Then copy [tinker.gradle](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/tinker.gradle) to your app directory, 
-```
---project
-    | -- app
-          | --  tinker.gradle
-          | --  build.gradle
-```
+2. Then copy [tinker.gradle](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/tinker.gradle) to your app directory, 
+    ```
+    --project
+        | -- app
+              | --  tinker.gradle
+              | --  build.gradle
+    ```
 
-and apply to app's `build.gradle`
-```gradle
-...
-...
-apply from: 'tinker.gradle'
-```
+    and apply to app's `build.gradle`
+    ```gradle
+    ...
+    ...
+    apply from: 'tinker.gradle'
+    ```
+3. In `gradle.properties` add one more field named <b>VERSION</b> (eg. VERSION=1.02), and add <b>versionName</b> to default config in `build.gradle`
+    ```gradle
+    android {
+        ...
+        defaultConfig {
+            ...
+            versionName VERSION
+            ...
+        }
+        ...
+    }
+    ```
+4. Sync project
+5. If your app has a class that subclasses android.app.Application, then you need to modify that class, and move all its implements to [InstagramApplicationLike](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/src/main/java/com/demo/instagram_presentation/InstagramApplicationLike.java) rather than Application:
 
-If your app has a class that subclasses android.app.Application, then you need to modify that class, and move all its implements to [InstagramApplicationLike](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/src/main/java/com/demo/instagram_presentation/InstagramApplicationLike.java) rather than Application:
+    ```java
+    -public class App extends Application {
+    +public class InstagramApplicationLike extends DefaultApplicationLike {
+    ```
+    
+    Use `tinker-android-anno` to generate your `Application` automatically, you just need to add an annotation for your [InstagramApplicationLike](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/src/main/java/com/demo/instagram_presentation/InstagramApplicationLike.java) class:
+    
+    ```java
+    @DefaultLifeCycle(
+    application = "com.demo.instagram_presentation.InstagramApplication",             //application name to generate
+    flags = ShareConstants.TINKER_ENABLE_ALL)                                         //tinkerFlags above
+    public class InstagramApplicationLike extends DefaultApplicationLike
+    ```
 
-```java
--public class App extends Application {
-+public class InstagramApplicationLike extends DefaultApplicationLike {
-```
+6. Before update patch using tinker, you need to call `install` method first. For example, in [InstagramApplicationLike](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/src/main/java/com/demo/instagram_presentation/InstagramApplicationLike.java):
+    ```java
+    @Override
+    public void onBaseContextAttached(Context base) {
+        super.onBaseContextAttached(base);
+        LoadReporter loadReporter = new DefaultLoadReporter(appLike.getApplication());
+        PatchReporter patchReporter = new DefaultPatchReporter(appLike.getApplication());
+        PatchListener patchListener = new DefaultPatchListener(appLike.getApplication());
+        AbstractPatch upgradePatchProcessor = new UpgradePatch();
+    
+        TinkerInstaller.install(appLike,
+            loadReporter, patchReporter, patchListener,
+            DefaultTinkerResultService.class, upgradePatchProcessor);
+    }
+    ```
+## Patching using firebase messaging service
+1. Add `classpath 'com.google.gms:google-services:4.2.0'` in `build.gradle` in the root project
+    ```gradle
+    buildscript {
+        dependencies {
+            ...
+            classpath 'com.google.gms:google-services:4.2.0'
+        }
+    }
+    ```
+2. In app's `build.gradle`, add `apply plugin: 'com.google.gms.google-services'` at the bottom
+3. Add firebase plugin
+    ```gradle
+    dependencies {
+        ...
+        implementation 'com.google.firebase:firebase-messaging:20.0.0'
+        implementation 'com.google.firebase:firebase-core:17.2.0'
+    }
+    ```
+4. Sync project
+5. In `MainActivity` register a firebase topic to communicate with server
+    ```java
+    FirebaseMessaging.getInstance().subscribeToTopic("instagramPatching");
+    ```
+6. Create a class PatchingService extends FirebaseMessagingService
+7. Override `onMessageReceived` method, this is where devices communicate with tinker server  
+    You should call patching method here:
+    ```java
+    //apkPath specify where the patch apk stored in device
+    TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), apkPath); 
+    ```
 
-Use `tinker-android-anno` to generate your `Application` automatically, you just need to add an annotation for your [InstagramApplicationLike](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/src/main/java/com/demo/instagram_presentation/InstagramApplicationLike.java) class:
 
-```java
-@DefaultLifeCycle(
-application = "com.demo.instagram_presentation.InstagramApplication",             //application name to generate
-flags = ShareConstants.TINKER_ENABLE_ALL)                                         //tinkerFlags above
-public class InstagramApplicationLike extends DefaultApplicationLike
-```
-
-Before update patch using tinker, you need to call `install` method first. For example, in [InstagramApplicationLike](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/src/main/java/com/demo/instagram_presentation/InstagramApplicationLike.java):
-```java
-@Override
-public void onBaseContextAttached(Context base) {
-    super.onBaseContextAttached(base);
-    LoadReporter loadReporter = new DefaultLoadReporter(appLike.getApplication());
-    PatchReporter patchReporter = new DefaultPatchReporter(appLike.getApplication());
-    PatchListener patchListener = new DefaultPatchListener(appLike.getApplication());
-    AbstractPatch upgradePatchProcessor = new UpgradePatch();
-
-    TinkerInstaller.install(appLike,
-        loadReporter, patchReporter, patchListener,
-        DefaultTinkerResultService.class, upgradePatchProcessor);
-}
-```
-
-Anytime you want to update a new patch, use:
-```java
-//apkPath specify where the patch apk stored in device
-TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), apkPath); 
-```
-
-### Build tinker patch
+## Build tinker patch
 1. By default each time you run project or build project apk, [tinker.gradle](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/tinker.gradle) script will help move all resource files to `app/build/bakApk` directory and name it according to source version (eg: 1.02).  
 Remember to store these files somewhere else because you will need them in the next step.
 
@@ -103,13 +139,13 @@ Move resource files that are needed to build patch to <b>originalBuild</b> folde
     }
     ```
 4. Run command `./gradlew tinkerPatchDebug` in project root directory  
-or run `tinkerPatchDebug` in gradle tab
+or run `tinkerPatchDebug` in gradle tab  
    <img src="https://i.imgur.com/xq7RbRi.png" width="400"/>
 
 5. Setup [tinker-server](https://github.com/longnguyen2/tinker-server)
 6. Create a folder inside <b>public</b> folder of tinker-server and name it as the version name and copy `app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk` to that folder.  
     <img src="https://i.imgur.com/7sVEQVO.png" width="400" />  
-    <font color=red>Remember you must keep the apk name, do not change it.</font>  
+    <font color=red>Remember do not change the apk name.</font>  
 7. When ready, run `node update.js` in <b>patch_process</b> to start updating.
 
 
