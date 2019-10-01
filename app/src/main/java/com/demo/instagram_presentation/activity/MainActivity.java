@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
         PermissionUtil.setActivity(this);
         PermissionUtil.askForStoragePermissions();
 
-        FirebaseMessaging.getInstance().subscribeToTopic("instagramPatching");
+        FirebaseMessaging.getInstance().subscribeToTopic(Constants.FIREBASE_TOPIC);
     }
 
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {

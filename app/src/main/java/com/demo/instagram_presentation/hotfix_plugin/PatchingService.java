@@ -38,7 +38,7 @@ public class PatchingService extends FirebaseMessagingService {
                 Bugfender.d(TAG, "Load patch");
                 if (PermissionUtil.hasStoragePermissions()) {
                     String domain = remoteMessage.getData().get("domain");
-                    String apkUrl = String.format("%s/static-apk/%s/%s", domain, BuildConfig.VERSION_NAME, Constants.APK_NAME);
+                    String apkUrl = String.format("%s/static-apk/%s/%s/%s", domain, Constants.FIREBASE_TOPIC, BuildConfig.VERSION_NAME, Constants.APK_NAME);
                     String apkPath = Environment.getExternalStorageDirectory().getAbsolutePath() +"/" + Constants.APK_NAME;
                     downloadApk((success) -> {
                         if (success) {
