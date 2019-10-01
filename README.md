@@ -163,9 +163,11 @@ or run `tinkerPatchDebug` in gradle tab
    <img src="https://i.imgur.com/xq7RbRi.png" width="400"/>
 
 5. Setup [tinker-server](https://github.com/longnguyen2/tinker-server)
-6. Create a folder inside <b>public</b> folder of tinker-server and name it as the version name and copy `app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk` to that folder.  
-    <img src="https://i.imgur.com/7sVEQVO.png" width="400" />  
-    <font color=red>Remember do not change the apk name.</font>  
-7. When ready, run `node update.js` in <b>patch_process</b> to start updating.
+6. Create a topic folder inside <b>public</b> folder of tinker-server (skip if existed)
+7. Then create version folder inside that topic folder
+8. Copy `app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk` to the version folder.  
+<img src="https://i.imgur.com/Ogi7ZuR.png" />  
+<font color=red>Remember do not change the apk name.</font>    
+9. When ready, run `node update.js` in <b>patch_process</b> to start updating.
 
 
