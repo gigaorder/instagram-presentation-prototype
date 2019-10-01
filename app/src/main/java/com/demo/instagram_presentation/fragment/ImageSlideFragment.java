@@ -25,6 +25,7 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
+import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
 import com.demo.instagram_presentation.model.InstagramPost;
@@ -211,7 +212,7 @@ public class ImageSlideFragment extends Fragment {
     private int scrollCount;
 
     private final Runtime runtime = Runtime.getRuntime();
-    private final String bugfenderTag = DeviceInfoUtil.getDeviceId();
+    private final String bugfenderTag = InstagramApplicationLike.DEVICE_ID;
 
     private Context context;
 

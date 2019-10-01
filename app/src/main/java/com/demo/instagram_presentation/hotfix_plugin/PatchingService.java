@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
+import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.DeviceInfoUtil;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -22,7 +23,7 @@ import java.io.IOException;
 import java.net.URL;
 
 public class PatchingService extends FirebaseMessagingService {
-    private final String TAG = DeviceInfoUtil.getDeviceId();
+    private final String TAG = InstagramApplicationLike.DEVICE_ID;
     private final String LOAD_PATCH = "load_patch";
     private final String CLEAN_PATCH = "clean_patch";
     private final String LOAD_LIBRARY = "load_library";

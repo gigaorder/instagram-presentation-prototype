@@ -8,11 +8,12 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.DeviceInfoUtil;
 
 public class InstagramLogin {
-    private final String TAG = DeviceInfoUtil.getDeviceId();
+    private final String TAG = InstagramApplicationLike.DEVICE_ID;
 
     private final String ACCOUNT_INFO_INCORRECT = "Login username or password is not correct.\nPlease change login info on config website.";
     private final String ACCOUNT_INFO_EMPTY = "Require instagram account to get posts data.\nPlease provide login info on config website.";

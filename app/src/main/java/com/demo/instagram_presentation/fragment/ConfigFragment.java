@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
 import com.demo.instagram_presentation.BuildConfig;
+import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.broadcast_receiver.WifiConnectReceiver;
 import com.demo.instagram_presentation.listener.WifiConnectListener;
@@ -135,7 +136,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
         txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
-        txtAppInfo.setText(String.format(Locale.ENGLISH, appInfoMsg, BuildConfig.VERSION_NAME, DeviceInfoUtil.getDeviceId()));
+        txtAppInfo.setText(String.format(Locale.ENGLISH, appInfoMsg, BuildConfig.VERSION_NAME, InstagramApplicationLike.DEVICE_ID));
 
         Handler handler = new Handler();
         new CountDownTimer(Constants.NETWORK_STATUS_CHECK_DELAY, 1000) {
