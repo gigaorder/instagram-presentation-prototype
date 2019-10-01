@@ -1,3 +1,10 @@
+## Update flow
+<img src="https://i.imgur.com/KnqeCog.png" />
+
+We gonna use a node server called [tinker server](https://github.com/longnguyen2/tinker-server) to serves patch apk file and to notify android devices whenever there is a new patch.  
+To communicate between server and device, we use [Google FCM](https://firebase.google.com/docs/cloud-messaging) (firebase cloud messaging).  
+Follow these steps to implement tinker patch:
+
 ## Import google-services.json
 To run the project you need to create a firebase project and generate <b>google-service.json</b> for android app:
 1. Go to [Firebase console](https://console.firebase.google.com/), click <b>Add project</b>  
