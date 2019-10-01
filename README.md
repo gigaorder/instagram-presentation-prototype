@@ -110,7 +110,20 @@ Gradle version should be <b>3.1.3</b> to avoid warning message when building pro
     //apkPath specify where the patch apk stored in device
     TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), apkPath); 
     ```
-
+   PatchingService example: [PatchingService](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/app/src/main/java/com/demo/instagram_presentation/hotfix_plugin/PatchingService.java)
+8. Finally add service with `MESSAGING_EVENT` intent-filter in `AndroidManifest.xml`:
+    ```xml
+    <application>
+        ...
+        <service
+            android:name=".hotfix_plugin.PatchingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+    </application>
+    ```
 
 ## Build tinker patch
 1. By default each time you run project or build project apk, [tinker.gradle](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/tinker.gradle) script will help move all resource files to `app/build/bakApk` directory and name it according to source version (eg: 1.02).  
