@@ -7,16 +7,16 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.Window;
 import android.view.WindowManager;
+import android.provider.Settings.Secure;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentManager;
 
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.hotfix_plugin.PermissionUtil;
+import com.demo.instagram_presentation.util.PermissionUtil;
 import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ConfigFragment;
@@ -48,10 +48,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean configServerStarted;
     private WifiScanResultReceiver wifiScanResultReceiver;
     private Intent restartServiceIntent;
+    public static MainActivity self;
+    public static final String DEVICE_ID = Secure.getString(InstagramApplicationContext.context.getContentResolver(), Secure.ANDROID_ID);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        self = this;
         boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
 
         AppPreferencesUtil.initSharedPreference(getApplicationContext());
@@ -121,7 +124,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void hotfixPluginSetup() {
         // Ask for read and write external storage permission
-        PermissionUtil.setActivity(this);
         PermissionUtil.askForStoragePermissions();
 
         FirebaseMessaging.getInstance().subscribeToTopic(Constants.FIREBASE_TOPIC);

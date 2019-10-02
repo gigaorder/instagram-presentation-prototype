@@ -1,7 +1,6 @@
 package com.demo.instagram_presentation.hotfix_plugin;
 
-import com.demo.instagram_presentation.InstagramApplicationLike;
-import com.demo.instagram_presentation.util.DeviceInfoUtil;
+import com.demo.instagram_presentation.activity.MainActivity;
 import com.tencent.tinker.entry.ApplicationLike;
 import com.tencent.tinker.lib.listener.DefaultPatchListener;
 import com.tencent.tinker.lib.listener.PatchListener;
@@ -17,7 +16,7 @@ import com.tencent.tinker.lib.util.TinkerLog;
 import com.tencent.tinker.lib.util.UpgradePatchRetry;
 
 public class TinkerManager {
-    private static final String TAG = InstagramApplicationLike.DEVICE_ID;
+    private static final String TAG = MainActivity.DEVICE_ID;
 
     private static ApplicationLike applicationLike;
     private static boolean isInstalled = false;

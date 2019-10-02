@@ -1,15 +1,14 @@
 package com.demo.instagram_presentation.hotfix_plugin;
 
-import android.os.Environment;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
-import com.demo.instagram_presentation.InstagramApplicationLike;
+import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.util.Constants;
-import com.demo.instagram_presentation.util.DeviceInfoUtil;
-import com.google.firebase.messaging.FirebaseMessaging;
+import com.demo.instagram_presentation.util.PermissionUtil;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import com.tencent.tinker.lib.library.TinkerLoadLibrary;
@@ -23,7 +22,7 @@ import java.io.IOException;
 import java.net.URL;
 
 public class PatchingService extends FirebaseMessagingService {
-    private final String TAG = InstagramApplicationLike.DEVICE_ID;
+    private final String TAG = MainActivity.DEVICE_ID;
     private final String LOAD_PATCH = "load_patch";
     private final String CLEAN_PATCH = "clean_patch";
     private final String LOAD_LIBRARY = "load_library";
@@ -37,20 +36,17 @@ public class PatchingService extends FirebaseMessagingService {
         switch (command) {
             case LOAD_PATCH:
                 Bugfender.d(TAG, "Load patch");
-                if (PermissionUtil.hasStoragePermissions()) {
-                    String domain = remoteMessage.getData().get("domain");
-                    String apkUrl = String.format("%s/static-apk/%s/%s/%s", domain, Constants.FIREBASE_TOPIC, BuildConfig.VERSION_NAME, Constants.APK_NAME);
-                    String apkPath = Environment.getExternalStorageDirectory().getAbsolutePath() +"/" + Constants.APK_NAME;
-                    downloadApk((success) -> {
-                        if (success) {
-                            TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), apkPath);
-                        } else {
-                            Bugfender.e(TAG, "Download APK failed");
-                        }
-                    }, apkUrl, apkPath);
-                } else {
-                    Bugfender.e(TAG, "Permission Denied");
-                }
+                String domain = remoteMessage.getData().get("domain");
+                String apkUrl = String.format("%s/static-apk/%s/%s/%s", domain, Constants.FIREBASE_TOPIC, BuildConfig.VERSION_NAME, Constants.APK_NAME);
+                String apkPath = MainActivity.self.getFilesDir().getAbsolutePath() +"/" + Constants.APK_NAME;
+                Log.d("APK Path", apkPath);
+                downloadApk((success) -> {
+                    if (success) {
+                        TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), apkPath);
+                    } else {
+                        Bugfender.e(TAG, "Download APK failed");
+                    }
+                }, apkUrl, apkPath);
                 break;
             case LOAD_LIBRARY:
                 Bugfender.d(TAG, "Load library");

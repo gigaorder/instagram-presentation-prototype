@@ -5,16 +5,14 @@ import android.content.Intent;
 import android.os.IBinder;
 
 import com.bugfender.sdk.Bugfender;
-import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.activity.MainActivity;
-import com.demo.instagram_presentation.util.DeviceInfoUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RestartAppService extends Service {
     private Logger log;
-    private final String bugfenderTag = InstagramApplicationLike.DEVICE_ID;
+    private final String bugfenderTag = MainActivity.DEVICE_ID;
 
     public RestartAppService() {
         log = LoggerFactory.getLogger(RestartAppService.class);

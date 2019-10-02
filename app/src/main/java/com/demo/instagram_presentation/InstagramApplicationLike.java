@@ -9,7 +9,6 @@ import android.os.Build;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.hotfix_plugin.TinkerManager;
 import com.demo.instagram_presentation.util.Constants;
-import com.demo.instagram_presentation.util.DeviceInfoUtil;
 import com.tencent.tinker.anno.DefaultLifeCycle;
 import com.tencent.tinker.entry.DefaultApplicationLike;
 import com.tencent.tinker.loader.shareutil.ShareConstants;
@@ -18,8 +17,6 @@ import com.tencent.tinker.loader.shareutil.ShareConstants;
         flags = ShareConstants.TINKER_ENABLE_ALL,
         loadVerifyFlag = false)
 public class InstagramApplicationLike extends DefaultApplicationLike {
-    public static final String DEVICE_ID = DeviceInfoUtil.getDeviceId();
-
     public InstagramApplicationLike(Application application, int tinkerFlags, boolean tinkerLoadVerifyFlag, long applicationStartElapsedTime, long applicationStartMillisTime, Intent tinkerResultIntent) {
         super(application, tinkerFlags, tinkerLoadVerifyFlag, applicationStartElapsedTime, applicationStartMillisTime, tinkerResultIntent);
     }
@@ -38,9 +35,11 @@ public class InstagramApplicationLike extends DefaultApplicationLike {
     @Override
     public void onBaseContextAttached(Context base) {
         super.onBaseContextAttached(base);
+        InstagramApplicationContext.application = getApplication();
+        InstagramApplicationContext.context = getApplication();
+
         TinkerManager.setTinkerApplicationLike(this);
 
-//        TinkerManager.initFastCrashProtect();
         TinkerManager.setUpgradeRetryEnable(true);
 
         TinkerManager.installTinker(this);

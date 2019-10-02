@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 public class AppExceptionHandler implements Thread.UncaughtExceptionHandler {
     private Activity activity;
     private Logger log;
-    private final String bugfenderTag = InstagramApplicationLike.DEVICE_ID;
+    private final String bugfenderTag = MainActivity.DEVICE_ID;
 
     public AppExceptionHandler(Activity activity) {
         this.activity = activity;

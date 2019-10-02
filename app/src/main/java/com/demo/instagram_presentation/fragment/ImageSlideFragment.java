@@ -25,26 +25,22 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
-import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.model.InstagramPostElement;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.Constants;
-import com.demo.instagram_presentation.util.DeviceInfoUtil;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.squareup.picasso.Picasso;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -56,8 +52,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import butterknife.BindString;
 import butterknife.BindView;
@@ -212,7 +206,7 @@ public class ImageSlideFragment extends Fragment {
     private int scrollCount;
 
     private final Runtime runtime = Runtime.getRuntime();
-    private final String bugfenderTag = InstagramApplicationLike.DEVICE_ID;
+    private final String bugfenderTag = MainActivity.DEVICE_ID;
 
     private Context context;
 
