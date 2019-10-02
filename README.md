@@ -163,11 +163,26 @@ or run `tinkerPatchDebug` in gradle tab
    <img src="https://i.imgur.com/xq7RbRi.png" width="400"/>
 
 5. Setup [tinker-server](https://github.com/longnguyen2/tinker-server)
-6. Create a topic folder inside <b>public</b> folder of tinker-server (skip if existed)
-7. Then create version folder inside that topic folder
-8. Copy `app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk` to the version folder.  
-<img src="https://i.imgur.com/Ogi7ZuR.png" />  
-<font color=red>Remember do not change the apk name.</font>    
-9. When ready, run `node update.js` in <b>patch_process</b> to start updating.
-
-
+6. Install `sshpass`
+    - mac: `brew install https://raw.githubusercontent.com/kadwanev/bigboybrew/master/Library/Formula/sshpass.rb`
+    - ubuntu: `sudo apt-get install sshpass`
+    - centos: `yum install sshpass`
+6. open file `ssh.cfg` in root project and config to your host server
+For example:
+    ```
+    domain=192.168.1.1
+    usr=root
+    pwd=root
+    src=~/instagram-presentation-prototype
+    serverDir=/home/root/tinker-server
+    topic=instagramPatching
+    version=1.02
+    ```
+    - <b>domain</b>: host domain
+    - <b>usr</b>: host username
+    - <b>pwd</b>: host password
+    - <b>src</b>: path to android project
+    - <b>serverDir</b>: path to tinker-server directory on host
+    - <b>topic</b>: firebase topic that used in android project
+    - <b>version</b>: version of original apk 
+7. Run command `./patch` in root folder of project to automatically upload patch to server and update
