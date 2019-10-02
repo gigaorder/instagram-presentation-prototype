@@ -1,7 +1,5 @@
 package com.demo.instagram_presentation.util;
 
-import android.os.Environment;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -10,17 +8,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class LicenseUtil {
-    private LicenseUtil() {
-    }
 
     public static boolean isKeyIdFileInitialized() {
-        File file = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
+        File file = new File(DeviceUtil.getDataPath(), Constants.LICENSE_ID_FILENAME);
 
         return file.exists();
     }
 
     public static void initKeyIdFile() {
-        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
+        File licenseFile = new File(DeviceUtil.getDataPath(), Constants.LICENSE_ID_FILENAME);
 
         int keyId = ThreadLocalRandom.current().nextInt(Constants.BASE_KEY_SEED_MINIMUM_VALUE, Constants.BASE_KEY_SEED_MAXIMUM_VALUE);
 
@@ -33,7 +29,7 @@ public class LicenseUtil {
     }
 
     public static void writeKeyFile(String licenseKey) {
-        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_KEY_FILENAME);
+        File licenseFile = new File(DeviceUtil.getDataPath(), Constants.LICENSE_KEY_FILENAME);
 
         try (FileWriter fileWriter = new FileWriter(licenseFile)) {
 
@@ -45,7 +41,7 @@ public class LicenseUtil {
     }
 
     public static int readKeyIdFromFile() {
-        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_ID_FILENAME);
+        File licenseFile = new File(DeviceUtil.getDataPath(), Constants.LICENSE_ID_FILENAME);
 
         try (FileInputStream fis = new FileInputStream(licenseFile)) {
 
@@ -80,7 +76,7 @@ public class LicenseUtil {
     }
 
     private static int readKeyFromFile() {
-        File licenseFile = new File(Environment.getDataDirectory(), Constants.LICENSE_KEY_FILENAME);
+        File licenseFile = new File(DeviceUtil.getDataPath(), Constants.LICENSE_KEY_FILENAME);
 
         try (FileInputStream fis = new FileInputStream(licenseFile)){
             byte[] data = new byte[(int) licenseFile.length()];
