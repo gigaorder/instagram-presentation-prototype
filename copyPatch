@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+source gradle.properties
+source ssh.cfg
+echo Test connection
+test=$(sshpass -p $pwd ssh $usr@$domain "echo connected")
+if [ "$test" != connected ]; then
+    echo Cannot connect to host
+    exit 1
+fi
+echo Connection success
+echo Making directories
+sshpass -p $pwd ssh $usr@$domain "mkdir $serverDir/public; mkdir $serverDir/public/$TOPIC; mkdir $serverDir/public/$TOPIC/$VERSION" 
+echo Sending file from $src/app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk to $usr@$domain:$serverDir/public/$TOPIC/$VERSION 
+sshpass -p $pwd scp $src/app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk $usr@$domain:$serverDir/public/$TOPIC/$VERSION && success=true
+if [ "$success" = true ]; then
+    echo Send file success 
+else
+    echo Send file failed
+fi

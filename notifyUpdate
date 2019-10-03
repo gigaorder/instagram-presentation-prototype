@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+source ssh.cfg
+sshpass -p $pwd ssh $usr@$domain "node $serverDir/patch_process/update.js"
