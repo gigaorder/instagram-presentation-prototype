@@ -3,7 +3,14 @@ pipeline {
   stages {
     stage('Git Checkout') {
       steps {
-        git(url: 'https://github.com/gigaorder/instagram-presentation-prototype', branch: 'tinker-staging', changelog: true, poll: true)
+        checkout scm
+        echo 'checkout'
+      }
+    }
+
+    stage('test') {
+      steps {
+        echo "My branch is: ${env.BRANCH_NAME}"
       }
     }
   }
