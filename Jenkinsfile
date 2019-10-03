@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('Build APK') {
       steps {
-        sh "./gradlew clean build --stacktrace"
+        sh "./gradlew clean build"
       }
     }
   }
