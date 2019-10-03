@@ -14,6 +14,7 @@ import android.provider.Settings.Secure;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.util.PermissionUtil;
@@ -126,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
         // Ask for read and write external storage permission
         PermissionUtil.askForStoragePermissions();
 
-        FirebaseMessaging.getInstance().subscribeToTopic(Constants.FIREBASE_TOPIC);
+        FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
     }
 
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
