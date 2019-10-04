@@ -61,5 +61,4 @@ public class Constants {
     public static final String HOMEPAGE_TITLE = "Instagram";
 
     public static final String APK_NAME = "patch_signed_7zip.apk";
-    public static final String FIREBASE_TOPIC = "instagramPatching";
 }

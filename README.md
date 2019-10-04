@@ -42,7 +42,8 @@ Gradle version should be <b>3.1.3</b> to avoid warning message when building pro
     ...
     apply from: 'tinker.gradle'
     ```
-3. In `gradle.properties` add one more field named <b>VERSION</b> (eg. VERSION=1.02), and add <b>versionName</b> to default config in `build.gradle`
+3. In `gradle.properties` add field named <b>VERSION</b> (eg. VERSION=1.02) and TOPIC for firebase topic (eg. TOPIC=instagramPatching)  
+ Then add <b>versionName</b> and <b>TOPIC</b> to default config in `build.gradle`
     ```gradle
     android {
         ...
@@ -50,6 +51,7 @@ Gradle version should be <b>3.1.3</b> to avoid warning message when building pro
             ...
             versionName VERSION
             ...
+            buildConfigField"String","TOPIC","\"${TOPIC}\""
         }
         ...
     }
@@ -106,9 +108,9 @@ Gradle version should be <b>3.1.3</b> to avoid warning message when building pro
     }
     ```
 4. Sync project
-5. In `MainActivity` register a firebase topic to communicate with server
+5. In `MainActivity` register the firebase topic that has been configured before to communicate with server
     ```java
-    FirebaseMessaging.getInstance().subscribeToTopic("instagramPatching");
+    FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
     ```
 6. Create a class PatchingService extends FirebaseMessagingService
 7. Override `onMessageReceived` method, this is where devices communicate with tinker server  
@@ -139,27 +141,17 @@ Remember to store these files somewhere else because you will need them in the n
     <img src="https://i.imgur.com/axvvfd5.png" width="400"/>
   
 2. Tinker will build update patch based on the original resource files (.apk, -R, -mapping) which means for each version you have to build a corresponding update patch so that android devices can apply patch without error.  
-Create <b>originalBuild</b> in root of the project.    
-Move resource files that are needed to build patch to <b>originalBuild</b> folder  
+
+    Move resource files that are needed to build patch to <b>originalBuild</b> folder and rename them to app.apk, app-R.txt, app-mapping.txt …
     ```
     --project
         | -- app
         | -- originalBuild/
-                | --  app-1.02-R.txt
-                | --  app-1.02.apk
-    ```
-3. In <b>tinker.gradle</b>, change <b>ext</b> config to the resource names that you've already copied to <b>originalBuild</b> folder
-    ```
-    ext {
-        tinkerOldApkPath = "${originalBuildPath}/app-1.02.apk"
-        tinkerApplyMappingPath = "${originalBuildPath}/app-1.02-mapping.txt"
-        tinkerApplyResourcePath = "${originalBuildPath}/app-1.02-R.txt"
-    
-        tinkerBuildFlavorDirectory = "${originalBuildPath}/app-1.02"
-    }
+                | --  app-R.txt
+                | --  app.apk
     ```
 4. Run command `./gradlew tinkerPatchDebug` in project root directory  
-or run `tinkerPatchDebug` in gradle tab  
+or run `tinkerPatchDebug` in android studio's gradle tab  
    <img src="https://i.imgur.com/xq7RbRi.png" width="400"/>
 
 5. Setup [tinker-server](https://github.com/longnguyen2/tinker-server)
@@ -167,7 +159,7 @@ or run `tinkerPatchDebug` in gradle tab
     - mac: `brew install https://raw.githubusercontent.com/kadwanev/bigboybrew/master/Library/Formula/sshpass.rb`
     - ubuntu: `sudo apt-get install sshpass`
     - centos: `yum install sshpass`
-6. open file `ssh.cfg` in root project and config to your host server
+6. open file `ssh.cfg` in root project and config to your host server  
 For example:
     ```
     domain=192.168.1.1
@@ -175,14 +167,13 @@ For example:
     pwd=root
     src=~/instagram-presentation-prototype
     serverDir=/home/root/tinker-server
-    topic=instagramPatching
-    version=1.02
     ```
     - <b>domain</b>: host domain
     - <b>usr</b>: host username
     - <b>pwd</b>: host password
     - <b>src</b>: path to android project
     - <b>serverDir</b>: path to tinker-server directory on host
-    - <b>topic</b>: firebase topic that used in android project
-    - <b>version</b>: version of original apk 
-7. Run command `./patch` in root folder of project to automatically upload patch to server and update
+
+7. Run command `./patch` in root folder of project to automatically upload patch to server.  
+    	<span style="color: red">You need to repeat this process for every version's patch.</span>
+8. Finally, if you want to notify devices to update new patch, run command `./notifyUpdate` in root folder
