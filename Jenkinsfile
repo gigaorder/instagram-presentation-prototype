@@ -10,7 +10,7 @@ pipeline {
 
     stage('Build Tinker patch') {
       steps {
-        sh "mkdir ./originalBuild"
+        sh "mkdir -p ./originalBuild"
         sh "cp ./app/build/bakApk/app-1.02.apk ./originalBuild/app-1.02.apk"
         sh "./gradlew tinkerPatchDebug"
         sh "cp /var/jenkins_home/files/ssh.cfg ./app/ssh.cfg"
