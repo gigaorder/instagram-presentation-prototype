@@ -304,10 +304,11 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         if (!wifiConnected) {
             wifiConnected = true;
             txtServerInfo.setText(wifiDetectedMsg);
+            sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
+
             Handler handler = new Handler();
 
             handler.postDelayed(() -> {
-                sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
 
                 if (wifiP2pChannel != null) {
                     wifiP2pManager.removeGroup(wifiP2pChannel, null);
