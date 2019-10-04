@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-source gradle.properties
-source ssh.cfg
+source ./gradle.properties
+source ./ssh.cfg
 echo Test connection
 test=$(sshpass -p $pwd ssh $usr@$domain "echo connected")
 if [ "$test" != connected ]; then
