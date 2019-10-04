@@ -1,7 +1,5 @@
 package com.demo.instagram_presentation.util;
 
-import android.util.Log;
-
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -14,16 +12,6 @@ import java.util.Locale;
 
 public class InstagramUtil {
     private static JsonParser jsonParser;
-
-    public static String constructInstagramUserInfoUrl(String instagramSourceUrl) {
-        if (instagramSourceUrl.endsWith("/")) {
-            instagramSourceUrl += "?__a=1";
-        } else {
-            instagramSourceUrl += "/?__a=1";
-        }
-
-        return instagramSourceUrl;
-    }
 
     public static String normalizeUserUrl(String instagramSourceUrl) {
         String[] urlParts =  instagramSourceUrl.split("/+");

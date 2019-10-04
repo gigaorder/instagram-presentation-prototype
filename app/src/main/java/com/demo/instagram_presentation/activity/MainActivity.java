@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
 
         AppPreferencesUtil.initSharedPreference(getApplicationContext());
-        NetworkUtil.initNetworkService(this);
+        NetworkUtil.initNetworkService();
 
         restartServiceIntent = new Intent(this, RestartAppService.class);
         startService(restartServiceIntent);
@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
         }
 
+        PermissionUtil.askForRequiredPermissions();
         hotfixPluginSetup();
     }
 
@@ -119,14 +120,12 @@ public class MainActivity extends AppCompatActivity {
             webServer.start();
             configServerStarted = true;
         } catch (IOException e) {
+            configServerStarted = false;
             e.printStackTrace();
         }
     }
 
     private void hotfixPluginSetup() {
-        // Ask for read and write external storage permission
-        PermissionUtil.askForStoragePermissions();
-
         FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
     }
 

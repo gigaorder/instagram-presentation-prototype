@@ -28,12 +28,12 @@ public class AppPreferencesUtil {
 
     public static void setDefaultImageSize(Activity activity) {
         if (sharedPreferences.getString(imgMainWidthPrefKey, null) == null) {
-            int width = ScreenUtil.getScreenWidth(activity);
+            int width = ScreenUtil.getScreenWidth();
             sharedPreferences.edit().putString(imgMainWidthPrefKey, String.valueOf(width)).apply();
         }
 
         if (sharedPreferences.getString(imgMainHeightPrefKey, null) == null) {
-            int height = (int) (ScreenUtil.getScreenHeight(activity) * 0.75); // Likely to be changed by user -> no need to extract as a constant
+            int height = (int) (ScreenUtil.getScreenHeight() * 0.75); // Likely to be changed by user -> no need to extract as a constant
             sharedPreferences.edit().putString(imgMainHeightPrefKey, String.valueOf(height)).apply();
         }
     }

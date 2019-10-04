@@ -1,7 +1,5 @@
 package com.demo.instagram_presentation.util;
 
-import android.os.Environment;
-
 public class Constants {
     //Config constants
     public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000; // in milliseconds
