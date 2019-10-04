@@ -1,4 +1,4 @@
-#!/bin/bash sh
+#!/bin/bash
 
 source ./gradle.properties
 source ./ssh.cfg
