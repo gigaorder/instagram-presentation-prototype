@@ -13,8 +13,7 @@ pipeline {
         sh "mkdir -p ./originalBuild"
         sh "cp ./app/build/bakApk/app-1.02.apk ./originalBuild/app-1.02.apk"
         sh "./gradlew tinkerPatchDebug"
-        sh "rm ./app/ssh.cfg"
-        sh "cp /var/jenkins_home/files/ssh.cfg ./app/ssh.cfg"
+        sh "cp /var/jenkins_home/files/ssh.cfg ./ssh.cfg"
         sh "./copyPatch"
       }
     }
