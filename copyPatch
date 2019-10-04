@@ -11,8 +11,8 @@ fi
 echo Connection success
 echo Making directories
 sshpass -p $pwd ssh $usr@$domain "mkdir $serverDir/public; mkdir $serverDir/public/$TOPIC; mkdir $serverDir/public/$TOPIC/$VERSION" 
-echo Sending file from $src/app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk to $usr@$domain:$serverDir/public/$TOPIC/$VERSION 
-sshpass -p $pwd scp $src/app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk $usr@$domain:$serverDir/public/$TOPIC/$VERSION && success=true
+echo Sending file from ./app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk to $usr@$domain:$serverDir/public/$TOPIC/$VERSION
+sshpass -p $pwd scp ./app/build/outputs/apk/tinkerPatch/debug/patch_signed_7zip.apk $usr@$domain:$serverDir/public/$TOPIC/$VERSION && success=true
 if [ "$success" = true ]; then
     echo Send file success 
 else
