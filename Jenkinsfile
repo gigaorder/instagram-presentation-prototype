@@ -4,6 +4,7 @@ pipeline {
     stage('Build APK') {
       steps {
         sh "./gradlew clean build"
+        echo "test"
       }
     }
   }
