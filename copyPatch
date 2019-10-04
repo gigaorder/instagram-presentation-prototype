@@ -1,6 +1,6 @@
-#!/usr/bin/env sh
+#!/bin/bash
 
-source ssh.cfg
+source ./ssh.cfg
 echo Test connection
 test=$(sshpass -p $pwd ssh $usr@$domain "echo connected")
 if [ "$test" != connected ]; then
