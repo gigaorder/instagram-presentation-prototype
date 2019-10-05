@@ -1,5 +1,6 @@
 package com.demo.instagram_presentation.hotfix_plugin;
 
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -7,8 +8,8 @@ import androidx.annotation.NonNull;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.activity.MainActivity;
+import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.Constants;
-import com.demo.instagram_presentation.util.PermissionUtil;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import com.tencent.tinker.lib.library.TinkerLoadLibrary;
@@ -36,8 +37,19 @@ public class PatchingService extends FirebaseMessagingService {
         switch (command) {
             case LOAD_PATCH:
                 Bugfender.d(TAG, "Load patch");
+
+                SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
+                Tinker tinker = Tinker.with(getApplicationContext());
+                String version = sharedPreferences.getString("originalVersion", "");
+                if (version.isEmpty()) {
+                    if (!tinker.isTinkerLoaded()) {
+                        sharedPreferences.edit().putString("originalVersion", BuildConfig.VERSION_NAME).apply();
+                        version = BuildConfig.VERSION_NAME;
+                    }
+                }
+
                 String domain = remoteMessage.getData().get("domain");
-                String apkUrl = String.format("%s/static-apk/%s/%s/%s", domain, BuildConfig.TOPIC, BuildConfig.VERSION_NAME, Constants.APK_NAME);
+                String apkUrl = String.format("%s/static-apk/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constants.APK_NAME);
                 String apkPath = MainActivity.self.getFilesDir().getAbsolutePath() +"/" + Constants.APK_NAME;
                 Log.d("APK Path", apkPath);
                 downloadApk((success) -> {
