@@ -12,15 +12,7 @@ import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
-import com.tencent.tinker.lib.library.TinkerLoadLibrary;
 import com.tencent.tinker.lib.tinker.Tinker;
-import com.tencent.tinker.lib.tinker.TinkerInstaller;
-import com.tencent.tinker.loader.shareutil.ShareTinkerInternals;
-
-import java.io.BufferedInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URL;
 
 public class PatchingService extends FirebaseMessagingService {
     private final String TAG = MainActivity.DEVICE_ID;
@@ -34,77 +26,45 @@ public class PatchingService extends FirebaseMessagingService {
         super.onMessageReceived(remoteMessage);
 
         String command = remoteMessage.getData().get("command");
+        Log.d("Tinker command", command);
         switch (command) {
             case LOAD_PATCH:
                 Bugfender.d(TAG, "Load patch");
 
                 SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
                 Tinker tinker = Tinker.with(getApplicationContext());
-                String version = sharedPreferences.getString("originalVersion", "");
-                if (version.isEmpty()) {
-                    if (!tinker.isTinkerLoaded()) {
-                        sharedPreferences.edit().putString("originalVersion", BuildConfig.VERSION_NAME).apply();
-                        version = BuildConfig.VERSION_NAME;
-                    }
+                if (!tinker.isTinkerLoaded()) {
+                    sharedPreferences.edit().putString("originalVersion", BuildConfig.VERSION_NAME).apply();
                 }
 
+                String version = sharedPreferences.getString("originalVersion", BuildConfig.VERSION_NAME);
                 String domain = remoteMessage.getData().get("domain");
-                String apkUrl = String.format("%s/static-apk/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constants.APK_NAME);
-                String apkPath = MainActivity.self.getFilesDir().getAbsolutePath() +"/" + Constants.APK_NAME;
-                Log.d("APK Path", apkPath);
-                downloadApk((success) -> {
-                    if (success) {
-                        TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), apkPath);
-                    } else {
-                        Bugfender.e(TAG, "Download APK failed");
-                    }
-                }, apkUrl, apkPath);
+
+                String patchUrl = String.format("%s/static-apk/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constants.APK_NAME);
+                String patchPath = MainActivity.self.getFilesDir().getAbsolutePath() +"/" + Constants.APK_NAME;
+                String md5Url = String.format("%s/md5/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constants.APK_NAME);
+
+                SharedPreferences.Editor preferencesEditor = sharedPreferences.edit();
+                preferencesEditor.putString(Constant.PATCH_URL_KEY, patchUrl);
+                preferencesEditor.putString(Constant.PATCH_PATH_KEY, patchPath);
+                preferencesEditor.putString(Constant.MD5_URL_KEY, md5Url);
+                preferencesEditor.apply();
+
+                PatchingUtil.updateCounter = 1;
+                PatchingUtil.downloadAndUpdate();
                 break;
             case LOAD_LIBRARY:
                 Bugfender.d(TAG, "Load library");
-                TinkerLoadLibrary.installNavitveLibraryABI(getApplicationContext(), "armeabi");
-                System.loadLibrary("stlport_shared");
+                PatchingUtil.loadLibrary();
                 break;
             case CLEAN_PATCH:
                 Bugfender.d(TAG, "Clean patch");
-                Tinker.with(getApplicationContext()).cleanPatch();
+                PatchingUtil.cleanPatch();
                 break;
             case KILL_PROCESS:
                 Bugfender.d(TAG, "Kill process");
-                ShareTinkerInternals.killAllOtherProcess(getApplicationContext());
-                android.os.Process.killProcess(android.os.Process.myPid());
+                PatchingUtil.killProcess();
                 break;
         }
-    }
-
-    private void downloadApk(DownloadTask downloadTask, String url, String savePath) {
-        BufferedInputStream inStream = null;
-        FileOutputStream outStream = null;
-        try {
-            inStream = new BufferedInputStream(new URL(url).openStream());
-            outStream = new FileOutputStream(savePath);
-            byte [] dataBuffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = inStream.read(dataBuffer, 0, 1024)) != -1) {
-                outStream.write(dataBuffer, 0, bytesRead);
-            }
-            inStream.close();
-            outStream.close();
-            downloadTask.onFinish(true);
-        } catch (IOException e) {
-            e.printStackTrace();
-            downloadTask.onFinish(false);
-        } finally {
-            try {
-                if (inStream != null) inStream.close();
-                if (outStream != null) outStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private interface DownloadTask {
-        void onFinish(boolean success);
     }
 }
