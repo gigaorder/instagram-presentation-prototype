@@ -8,9 +8,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class LicenseUtil {
+    private static boolean isValidLicense = false;
 
     public static boolean isKeyIdFileInitialized() {
         File file = new File(DeviceUtil.getDataPath(), Constants.LICENSE_ID_FILENAME);
+
+        return file.exists();
+    }
+
+    public static boolean isKeyFileExisted() {
+        File file = new File(DeviceUtil.getDataPath(), Constants.LICENSE_KEY_FILENAME);
 
         return file.exists();
     }
@@ -35,8 +42,10 @@ public class LicenseUtil {
 
             fileWriter.append(licenseKey);
             fileWriter.flush();
+            isValidLicense = true;
         } catch (IOException e) {
             e.printStackTrace();
+            isValidLicense = false;
         }
     }
 
@@ -62,10 +71,13 @@ public class LicenseUtil {
     }
 
     public static boolean validateKeyFiles() {
-        int keyId = readKeyIdFromFile();
-        int key = readKeyFromFile();
+        if (!isValidLicense) {
+            int keyId = readKeyIdFromFile();
+            int key = readKeyFromFile();
 
-        return validateKey(keyId, key);
+            isValidLicense = validateKey(keyId, key);
+        }
+        return isValidLicense;
     }
 
     private static int generateKeyFromKeyId(int keyId) {
