@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.Window;
 import android.view.WindowManager;
 import android.provider.Settings.Secure;
@@ -17,6 +19,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.hotfix_plugin.Constant;
+import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
 import com.demo.instagram_presentation.util.PermissionUtil;
 import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
@@ -127,6 +131,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void hotfixPluginSetup() {
         FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
+        new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                PatchingUtil.checkForUpdate(Constant.DEFAULT_DOMAIN);
+                return null;
+            }
+        }.execute();
     }
 
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
@@ -152,7 +164,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        stopService(restartServiceIntent);
         finish();
     }
 
@@ -165,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopService(restartServiceIntent);
         BroadcastReceiverUtil.unregisterReceiver(this, appPreferenceChangedReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, loginFailedReceiver);
