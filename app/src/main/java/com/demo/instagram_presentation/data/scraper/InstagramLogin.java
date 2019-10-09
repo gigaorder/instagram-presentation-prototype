@@ -2,6 +2,7 @@ package com.demo.instagram_presentation.data.scraper;
 
 import android.os.Build;
 import android.os.Handler;
+import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
 import android.webkit.WebView;
@@ -14,8 +15,8 @@ import com.demo.instagram_presentation.util.Constants;
 public class InstagramLogin {
     private final String TAG = MainActivity.DEVICE_ID;
 
-    private final String ACCOUNT_INFO_INCORRECT = "Login username or password is not correct.\nPlease change login info on config website.";
-    private final String ACCOUNT_INFO_EMPTY = "Require instagram account to get posts data.\nPlease provide login info on config website.";
+    private final String ACCOUNT_INFO_INCORRECT = "Login username or password is not correct.\nPlease provide correct info on config website.";
+    private final String ACCOUNT_INFO_EMPTY = "Require instagram account to get post data.\nPlease provide login info on config website.";
     private final String REQUIRE_SECURITY_CODE = "Login action requires security code.\nPlease try another account.";
 
     private String username;
@@ -120,6 +121,8 @@ public class InstagramLogin {
                     String checkLoginSuccessScript = "(function () {return document.getElementById('slfErrorAlert') ? false : true})();";
                     webView.evaluateJavascript(checkLoginSuccessScript, loginSuccess -> verifyAccountCallback.finish(loginSuccess.equals("true")));
                 }, 1000);
+            } else {
+                new Handler().postDelayed(() -> executeLoginWithJSCode(verifyAccountCallback), 1000);
             }
         });
     }
