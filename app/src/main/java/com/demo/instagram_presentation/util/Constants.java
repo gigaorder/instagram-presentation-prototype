@@ -57,6 +57,4 @@ public class Constants {
     public static final String LOGIN_URL = BASE_URL + "accounts/login/";
     public static final String LOGINPAGE_TITLE = "Login • Instagram";
     public static final String HOMEPAGE_TITLE = "Instagram";
-
-    public static final String APK_NAME = "patch_signed_7zip.apk";
 }

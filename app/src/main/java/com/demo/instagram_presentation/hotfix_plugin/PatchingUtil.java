@@ -4,12 +4,14 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.tencent.tinker.lib.library.TinkerLoadLibrary;
 import com.tencent.tinker.lib.tinker.Tinker;
 import com.tencent.tinker.lib.tinker.TinkerInstaller;
+import com.tencent.tinker.lib.tinker.TinkerLoadResult;
 import com.tencent.tinker.loader.shareutil.SharePatchFileUtil;
 import com.tencent.tinker.loader.shareutil.ShareTinkerInternals;
 
@@ -43,6 +45,63 @@ public class PatchingUtil {
         android.os.Process.killProcess(android.os.Process.myPid());
     }
 
+    public static void checkForUpdate(String domain) {
+        Bugfender.d(TAG, "Check for update");
+        initUrl(domain);
+
+        Tinker tinker = Tinker.with(InstagramApplicationContext.context);
+        TinkerLoadResult tinkerLoadResult = tinker.getTinkerLoadResultIfPresent();
+
+        String patchMd5 = getMD5Code(AppPreferencesUtil.getSharedPreferences().getString(Constant.MD5_URL_KEY, ""));
+        String currentMd5 = tinkerLoadResult.currentVersion;
+
+        if (patchMd5.equals(currentMd5)) {
+            Bugfender.d(TAG, "Tinker patch: app is up to date");
+        } else {
+            Bugfender.d(TAG, "Tinker patch: there is a newer version. Start updating");
+            PatchingUtil.updateCounter = 1;
+            PatchingUtil.downloadAndUpdate();
+        }
+    }
+
+    private static void initUrl(String domain) {
+        SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
+        Tinker tinker = Tinker.with(InstagramApplicationContext.context);
+        if (!tinker.isTinkerLoaded()) {
+            sharedPreferences.edit().putString("originalVersion", BuildConfig.VERSION_NAME).apply();
+        }
+
+        String version = sharedPreferences.getString("originalVersion", BuildConfig.VERSION_NAME);
+
+        String patchUrl = String.format("%s/static-apk/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constant.APK_NAME);
+        String patchPath = MainActivity.self.getFilesDir().getAbsolutePath() +"/" + Constant.APK_NAME;
+        String md5Url = String.format("%s/md5/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constant.APK_NAME);
+
+        setUrlPreferences(patchUrl, patchPath, md5Url);
+    }
+
+    private static void setUrlPreferences(String patchUrl, String patchPath, String md5Url) {
+        SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
+        SharedPreferences.Editor preferencesEditor = sharedPreferences.edit();
+        preferencesEditor.putString(Constant.PATCH_URL_KEY, patchUrl);
+        preferencesEditor.putString(Constant.PATCH_PATH_KEY, patchPath);
+        preferencesEditor.putString(Constant.MD5_URL_KEY, md5Url);
+        preferencesEditor.apply();
+    }
+
+    private static String getMD5Code(String url) {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            return response.code() == 200 ? response.body().string() : "";
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
     public static void downloadAndUpdate() {
         SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         String patchUrl = sharedPreferences.getString(Constant.PATCH_URL_KEY, "");
@@ -66,11 +125,12 @@ public class PatchingUtil {
                 if (md5.equals(verifyMd5)) {
                     TinkerInstaller.onReceiveUpgradePatch(InstagramApplicationContext.context, patchPath);
                 } else {
-                    Log.d(TAG, "Tinker patch: incorrect MD5, retry downloading");
+                    Log.e(TAG, "Tinker patch: incorrect MD5, retry downloading");
                     downloadAndUpdate(patchUrl, patchPath, md5Url, retryDownloadCounter+1);
                 }
             } else {
                 Bugfender.e(TAG, "Download APK failed");
+                downloadAndUpdate(patchUrl, patchPath, md5Url, retryDownloadCounter+1);
             }
         }, patchUrl, patchPath);
     }
@@ -104,18 +164,5 @@ public class PatchingUtil {
 
     private interface DownloadTask {
         void onFinish(boolean success);
-    }
-
-    private static String getMD5Code(String url) {
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        try (Response response = client.newCall(request).execute()) {
-            return response.code() == 200 ? response.body().string() : "";
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "";
-        }
     }
 }
