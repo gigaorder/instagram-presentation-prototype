@@ -71,11 +71,13 @@ public class LicenseUtil {
     }
 
     public static boolean validateKeyFiles() {
-        if (!isValidLicense) {
-            int keyId = readKeyIdFromFile();
-            int key = readKeyFromFile();
+        if (isKeyFileExisted()) {
+            if (!isValidLicense) {
+                int keyId = readKeyIdFromFile();
+                int key = readKeyFromFile();
 
-            isValidLicense = validateKey(keyId, key);
+                isValidLicense = validateKey(keyId, key);
+            }
         }
         return isValidLicense;
     }
