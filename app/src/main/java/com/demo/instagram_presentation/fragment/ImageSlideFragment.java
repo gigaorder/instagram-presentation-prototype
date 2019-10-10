@@ -429,7 +429,7 @@ public class ImageSlideFragment extends Fragment {
                 Picasso.get()
                         .load(post.getImgUrl())
                         .fit()
-                        .centerInside()
+                        .centerCrop()
                         .into(imgMain);
 
                 DecimalFormat numberFormatter = new DecimalFormat("#,###");
@@ -452,7 +452,7 @@ public class ImageSlideFragment extends Fragment {
                     Picasso.get()
                             .load(lastUserProfilePicUrl)
                             .fit()
-                            .centerInside()
+                            .centerCrop()
                             .into(imgProfile);
                 }
 
