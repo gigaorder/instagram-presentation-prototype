@@ -5,7 +5,6 @@ FOLDER_LIST=("${FOLDER_LIST[@]##*/}")
 
 for VERSION_TO_PATCH in "${FOLDER_LIST[@]}"
 do
-  echo ${VERSION_TO_PATCH}
   mkdir -p ./originalBuild
   rm ./originalBuild/app.apk
   cp /var/jenkins_home/files/feed2wall/apk/${VERSION_TO_PATCH}/app.apk ./originalBuild/app.apk
