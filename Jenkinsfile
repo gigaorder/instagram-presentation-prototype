@@ -24,10 +24,12 @@ pipeline {
 
     stage('Send patch files to Tinker server') {
       steps {
-        VERSION = sh (
-          script: "cat gradle.properties | grep VERSION | sed 's/VERSION=//'",
-          returnStdout: true
-        ).trim()
+        script {
+            VERSION = sh (
+                      script: "cat gradle.properties | grep VERSION | sed 's/VERSION=//'",
+                      returnStdout: true
+                    ).trim()
+        }
 
         sh "cp /var/jenkins_home/files/feed2wall/ssh.cfg ./ssh.cfg"
         sh "./copyPatch -v ${VERSION} -t instagramPatching"
