@@ -1,26 +1,41 @@
 pipeline {
-  agent any
-  stages {
-    stage('Build APK') {
-      steps {
-        sh "cp /var/jenkins_home/files/google-services.json ./app/google-services.json"
-        sh "./gradlew clean build -x lint"
-      }
+    agent any
+
+    environment {
+        BUILD_VERSION = """${
+            sh(
+                    script: "cat gradle.properties | grep VERSION | sed 's/VERSION=//'",
+                    returnStdout: true
+            ).trim()
+        }"""
+
+        ORIGINAL_APK_FOLDER_PATH = "/var/jenkins_home/files/feed2wall/apk/$BUILD_VERSION"
     }
 
-    stage('Build Tinker patch') {
-      steps {
-        sh "mkdir -p ./originalBuild"
-        sh "cp ./app/build/bakApk/app-1.02.apk ./originalBuild/app.apk"
-        sh "./gradlew tinkerPatchDebug"
-      }
-    }
+    stages {
+        stage('Prepare config files') {
+            steps {
+                sh "cp /var/jenkins_home/files/feed2wall/google-services.json ./app/google-services.json"
+                sh "cp /var/jenkins_home/files/feed2wall/ssh.cfg ./ssh.cfg"
+            }
+        }
 
-    stage('Send patch files to Tinker server') {
-      steps {
-        sh "cp /var/jenkins_home/files/ssh.cfg ./ssh.cfg"
-        sh "./copyPatch"
-      }
+        stage('Build APK') {
+            steps {
+                sh "./gradlew clean build -x lint"
+            }
+        }
+
+        stage('Create patch files for all available versions') {
+            steps {
+                sh "./script/create-patch-files.sh"
+            }
+        }
+
+        stage('Store original APK file (if it does not exist)') {
+            steps {
+                sh "./script/save-apk.sh"
+            }
+        }
     }
-  }
 }
