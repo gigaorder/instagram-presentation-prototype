@@ -26,7 +26,7 @@ pipeline {
             }
         }
 
-        stage('Store built APK file') {
+        stage('Store original APK file (if it does not exist)') {
             steps {
                 sh "./script/save-apk.sh"
             }
@@ -34,7 +34,7 @@ pipeline {
 
         stage('Create patch files for all available versions') {
             steps {
-                sh "./create-patch-files.sh"
+                sh "./script/create-patch-files.sh"
             }
         }
     }
