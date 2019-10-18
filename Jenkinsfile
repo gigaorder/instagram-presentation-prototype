@@ -37,5 +37,11 @@ pipeline {
                 sh "./script/save-apk.sh"
             }
         }
+
+        stage('Notify update') {
+            stage {
+                sh "./notifyUpdate instagramPatching"
+            }
+        }
     }
 }
