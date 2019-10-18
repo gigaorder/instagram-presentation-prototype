@@ -26,15 +26,15 @@ pipeline {
             }
         }
 
-        stage('Store original APK file (if it does not exist)') {
-            steps {
-                sh "./script/save-apk.sh"
-            }
-        }
-
         stage('Create patch files for all available versions') {
             steps {
                 sh "./script/create-patch-files.sh"
+            }
+        }
+
+        stage('Store original APK file (if it does not exist)') {
+            steps {
+                sh "./script/save-apk.sh"
             }
         }
     }
