@@ -6,7 +6,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.provider.Settings.Secure;
@@ -17,6 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.hotfix_plugin.Constant;
+import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
 import com.demo.instagram_presentation.util.PermissionUtil;
 import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
@@ -59,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
         boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
 
         AppPreferencesUtil.initSharedPreference(getApplicationContext());
-        NetworkUtil.initNetworkService(this);
+        NetworkUtil.initNetworkService();
 
         restartServiceIntent = new Intent(this, RestartAppService.class);
         startService(restartServiceIntent);
@@ -110,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
         }
 
+        PermissionUtil.askForRequiredPermissions();
         hotfixPluginSetup();
     }
 
@@ -119,15 +125,21 @@ public class MainActivity extends AppCompatActivity {
             webServer.start();
             configServerStarted = true;
         } catch (IOException e) {
+            configServerStarted = false;
             e.printStackTrace();
         }
     }
 
     private void hotfixPluginSetup() {
-        // Ask for read and write external storage permission
-        PermissionUtil.askForStoragePermissions();
-
         FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
+        new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                PatchingUtil.checkForUpdate(Constant.DEFAULT_DOMAIN);
+                return null;
+            }
+        }.execute();
     }
 
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
@@ -153,7 +165,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        stopService(restartServiceIntent);
         finish();
     }
 
@@ -166,9 +177,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopService(restartServiceIntent);
         BroadcastReceiverUtil.unregisterReceiver(this, appPreferenceChangedReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, loginFailedReceiver);
         webServer.stop();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        getWindow().getDecorView().setSystemUiVisibility
+                ( View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY );
     }
 }

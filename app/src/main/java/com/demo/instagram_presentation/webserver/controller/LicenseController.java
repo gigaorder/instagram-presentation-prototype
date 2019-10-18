@@ -43,7 +43,7 @@ public class LicenseController {
 
     public NanoHTTPD.Response isDeviceValidated() {
         Map<String, Boolean> returnedDataMap = new HashMap<>();
-        returnedDataMap.put("validated", LicenseUtil.validateKeyFiles());
+        returnedDataMap.put("validated", LicenseUtil.isKeyFileExisted());
 
         return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(returnedDataMap));
     }

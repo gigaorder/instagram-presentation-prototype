@@ -424,7 +424,7 @@ public class ImageSlideFragment extends Fragment {
 
                 InstagramPost post = instagramPosts.get(index);
 
-                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
+//                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
                 Picasso.get()
                         .load(post.getImgUrl())
@@ -807,7 +807,7 @@ public class ImageSlideFragment extends Fragment {
                                 if (beforeAddSize < afterAddSize) {
                                     if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
                                         newInstagramPosts.add(post);
-                                        Picasso.get().load(post.getImgUrl()).resize(imgMainWidth, imgMainHeight).centerCrop().fetch();
+                                        Picasso.get().load(post.getImgUrl()).fetch();
                                         Picasso.get().load(post.getUserProfilePicUrl()).fetch();
                                         maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
                                     }
@@ -847,7 +847,7 @@ public class ImageSlideFragment extends Fragment {
                         imgNetworkStrength.setVisibility(View.VISIBLE);
                     }
                 } catch (Exception e) {
-                    Bugfender.e(bugfenderTag, "Failed while scanning network strength");
+//                    Bugfender.e(bugfenderTag, "Failed while scanning network strength");
                 } finally {
                     handler.postDelayed(this, intervalInMs);
                 }

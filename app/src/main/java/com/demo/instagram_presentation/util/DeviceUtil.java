@@ -1,5 +1,7 @@
 package com.demo.instagram_presentation.util;
 
+import android.os.Environment;
+
 import com.demo.instagram_presentation.activity.MainActivity;
 
 public class DeviceUtil {
@@ -7,7 +9,7 @@ public class DeviceUtil {
     public static String getDataPath() {
         if (dataPath == null || dataPath.isEmpty()) {
             dataPath = PermissionUtil.hasStoragePermissions() ?
-                    MainActivity.self.getExternalFilesDir(null).getPath() :
+                    Environment.getExternalStorageDirectory().getAbsolutePath() :
                     MainActivity.self.getFilesDir().getAbsolutePath();
         }
         return dataPath;

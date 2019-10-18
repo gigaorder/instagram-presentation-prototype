@@ -135,12 +135,12 @@ Gradle version should be <b>3.1.3</b> to avoid warning message when building pro
     ```
 
 ## Build tinker patch
-1. By default each time you run project or build project apk, [tinker.gradle](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/tinker.gradle) script will help move all resource files to `app/build/bakApk` directory and name it according to source version (eg: 1.02).  
-Remember to store these files somewhere else because you will need them in the next step.
+<b>Before build</b>: By default each time you run project or build project apk, [tinker.gradle](https://github.com/gigaorder/instagram-presentation-prototype/blob/tinker-staging/instagram-app/app/tinker.gradle) script will help move all resource files to `app/build/bakApk` directory and name it according to source version (eg: 1.02).  
+Remember to store these files <b>somewhere</b> else because you will need them in the next step.
 
-    <img src="https://i.imgur.com/axvvfd5.png" width="400"/>
+<img src="https://i.imgur.com/axvvfd5.png" width="400"/>
   
-2. Tinker will build update patch based on the original resource files (.apk, -R, -mapping) which means for each version you have to build a corresponding update patch so that android devices can apply patch without error.  
+1. Tinker will build update patch based on the original resource files (.apk, -R, -mapping) which means for each version you have to build a corresponding update patch so that android devices can apply patch without error.  
 
     Move resource files that are needed to build patch to <b>originalBuild</b> folder and rename them to app.apk, app-R.txt, app-mapping.txt …
     ```
@@ -150,30 +150,31 @@ Remember to store these files somewhere else because you will need them in the n
                 | --  app-R.txt
                 | --  app.apk
     ```
-4. Run command `./gradlew tinkerPatchDebug` in project root directory  
+2. Run command `./gradlew tinkerPatchDebug` in project root directory  
 or run `tinkerPatchDebug` in android studio's gradle tab  
    <img src="https://i.imgur.com/xq7RbRi.png" width="400"/>
 
-5. Setup [tinker-server](https://github.com/longnguyen2/tinker-server)
-6. Install `sshpass`
+3. Setup [tinker-server](https://github.com/longnguyen2/tinker-server)
+4. Install `sshpass`
     - mac: `brew install https://raw.githubusercontent.com/kadwanev/bigboybrew/master/Library/Formula/sshpass.rb`
     - ubuntu: `sudo apt-get install sshpass`
     - centos: `yum install sshpass`
-6. open file `ssh.cfg` in root project and config to your host server  
+5. open file `ssh.cfg` in root project and config to your host server  
 For example:
     ```
     domain=192.168.1.1
     usr=root
     pwd=root
-    src=~/instagram-presentation-prototype
     serverDir=/home/root/tinker-server
     ```
     - <b>domain</b>: host domain
     - <b>usr</b>: host username
     - <b>pwd</b>: host password
     - <b>src</b>: path to android project
-    - <b>serverDir</b>: path to tinker-server directory on host
 
-7. Run command `./patch` in root folder of project to automatically upload patch to server.  
-    	<span style="color: red">You need to repeat this process for every version's patch.</span>
-8. Finally, if you want to notify devices to update new patch, run command `./notifyUpdate` in root folder
+6. Run command `./copyPatch -v <version> -t <topic>` in root folder of project to automatically upload patch to server.
+    Note: `version` is original apk version, `topic` is firebase topic
+    For example: `./copyPatch -v 1.02 -t instagramPatching`      
+    <span style="color: red">You need to repeat step 1-6 for every version's patch.</span>
+7. Finally, if you want to notify devices to update new patch, run command `./notifyUpdate <topic>` (`topic` is firebase topic) in root folder
+    For example `./notifyUpdate instagramPatching`

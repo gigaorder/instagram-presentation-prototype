@@ -10,7 +10,6 @@ import com.tencent.tinker.lib.reporter.DefaultLoadReporter;
 import com.tencent.tinker.lib.reporter.DefaultPatchReporter;
 import com.tencent.tinker.lib.reporter.LoadReporter;
 import com.tencent.tinker.lib.reporter.PatchReporter;
-import com.tencent.tinker.lib.service.DefaultTinkerResultService;
 import com.tencent.tinker.lib.tinker.TinkerInstaller;
 import com.tencent.tinker.lib.util.TinkerLog;
 import com.tencent.tinker.lib.util.UpgradePatchRetry;
@@ -43,9 +42,13 @@ public class TinkerManager {
         PatchListener patchListener = new DefaultPatchListener(appLike.getApplication());
         AbstractPatch upgradePatchProcessor = new UpgradePatch();
 
+//        TinkerInstaller.install(appLike,
+//                loadReporter, patchReporter, patchListener,
+//                DefaultTinkerResultService.class, upgradePatchProcessor);
+
         TinkerInstaller.install(appLike,
                 loadReporter, patchReporter, patchListener,
-                DefaultTinkerResultService.class, upgradePatchProcessor);
+                TinkerResultService.class, upgradePatchProcessor);
 
         isInstalled = true;
     }

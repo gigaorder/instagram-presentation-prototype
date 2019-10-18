@@ -1,7 +1,5 @@
 package com.demo.instagram_presentation.util;
 
-import android.os.Environment;
-
 public class Constants {
     //Config constants
     public static final int DEFAULT_FEED_REQUEST_RETRY_INTERVAL = 10 * 1000; // in milliseconds
@@ -59,6 +57,4 @@ public class Constants {
     public static final String LOGIN_URL = BASE_URL + "accounts/login/";
     public static final String LOGINPAGE_TITLE = "Login • Instagram";
     public static final String HOMEPAGE_TITLE = "Instagram";
-
-    public static final String APK_NAME = "patch_signed_7zip.apk";
 }
