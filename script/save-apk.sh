@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION=`cat ../gradle.properties | grep VERSION | sed 's/VERSION=//'`
+VERSION=`cat gradle.properties | grep VERSION | sed 's/VERSION=//'`
 FOLDER_PATH="/var/jenkins_home/files/feed2wall/apk/$VERSION"
 
 if ! [[ -d "$FOLDER_PATH" ]]
