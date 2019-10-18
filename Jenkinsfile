@@ -10,14 +10,14 @@ pipeline {
 
     stage('Store built APK file') {
       steps {
-        sh "sh ./script/save-apk.sh"
+        sh "./script/save-apk.sh"
       }
     }
 
     stage('Build Tinker patch') {
       steps {
         sh "mkdir -p ./originalBuild"
-        sh "sh ./script/move-original-apk.sh"
+        sh "./script/move-original-apk.sh"
         sh "./gradlew tinkerPatchDebug"
       }
     }
