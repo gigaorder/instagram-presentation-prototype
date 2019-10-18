@@ -1,13 +1,14 @@
 #!/bin/bash
-FOLDER_LIST=`ls -d */`
+FOLDER_LIST=(/var/jenkins_home/files/feed2wall/apk/*/)
+FOLDER_LIST=("${FOLDER_LIST[@]%/}")
+FOLDER_LIST=("${FOLDER_LIST[@]##*/}")
 
-for FOLDER in "${FOLDER_LIST[@]}"
+for VERSION_TO_PATCH in "${FOLDER_LIST[@]}"
 do
-  VERSION_TO_PATCH=`echo ${FOLDER} | sed 's/\///g'`
   echo ${VERSION_TO_PATCH}
   mkdir -p ./originalBuild
   rm ./originalBuild/app.apk
-  cp /var/jenkins_home/files/feed2wall/apk/${VERSION_TO_PATCH}/app.apk ./originalBuild/
+  cp /var/jenkins_home/files/feed2wall/apk/${VERSION_TO_PATCH}/app.apk ./originalBuild/app.apk
   ./gradlew tinkerPatchDebug
   ./copyPatch -v ${VERSION_TO_PATCH} -t instagramPatching
 done
