@@ -2,21 +2,14 @@ pipeline {
     agent any
 
     environment {
-        VERSION = """${
+        BUILD_VERSION = """${
             sh(
                     script: "cat gradle.properties | grep VERSION | sed 's/VERSION=//'",
                     returnStdout: true
             ).trim()
         }"""
 
-        FOLDER_PATH = "/var/jenkins_home/files/feed2wall/apk/$VERSION"
-
-        PATCH_VERSION_LIST = """${
-            sh(
-                    script: "ls /var/jenkins_home/files/feed2wall/apk/",
-                    returnStdout: true
-            ).trim()
-        }"""
+        ORIGINAL_APK_FOLDER_PATH = "/var/jenkins_home/files/feed2wall/apk/$BUILD_VERSION"
     }
 
     stages {
@@ -39,17 +32,9 @@ pipeline {
             }
         }
 
-        stage('Build Tinker patch') {
+        stage('Create patch files for all available versions') {
             steps {
-                sh "mkdir -p ./originalBuild"
-                sh "cp ${FOLDER_PATH}/app.apk ./originalBuild/app.apk"
-                sh "./gradlew tinkerPatchDebug"
-            }
-        }
-
-        stage('Send patch files to Tinker server') {
-            steps {
-                sh "./copyPatch -v ${VERSION} -t instagramPatching"
+                sh "./create-patch-files.sh"
             }
         }
     }
