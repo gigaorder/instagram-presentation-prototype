@@ -11,6 +11,7 @@ if ! [[ -z "$(ls -A /var/jenkins_home/files/feed2wall/apk)" ]]; then
     cp /var/jenkins_home/files/feed2wall/apk/${VERSION_TO_PATCH}/app.apk ./originalBuild/app.apk
     ./gradlew tinkerPatchDebug
     ./copyPatch -v ${VERSION_TO_PATCH} -t instagramPatching
+    ./notifyUpdate instagramPatching
   done
 else
    echo "No original builds are found, patching won't happen"
