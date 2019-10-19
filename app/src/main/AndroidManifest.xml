@@ -37,11 +37,19 @@
             android:enabled="true"
             android:exported="true" />
 
+<!--        <service-->
+<!--            android:name=".hotfix_plugin.PatchingService"-->
+<!--            android:exported="false">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="com.google.firebase.MESSAGING_EVENT" />-->
+<!--            </intent-filter>-->
+<!--        </service>-->
         <service
             android:name=".hotfix_plugin.PatchingService"
-            android:exported="false">
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                <action android:name="com.demo.instagram_presentation.hotfix_plugin.PatchingService.BIND" />
             </intent-filter>
         </service>
 
