@@ -57,7 +57,7 @@ public class PatchingUtil {
 
         if (patchMd5.equals(currentMd5)) {
             Bugfender.d(TAG, "Tinker patch: app is up to date");
-        } else {
+        } else if (!patchMd5.isEmpty()) {
             Bugfender.d(TAG, "Tinker patch: there is a newer version. Start updating");
             PatchingUtil.updateCounter = 1;
             PatchingUtil.downloadAndUpdate();

@@ -32,7 +32,7 @@ public class TinkerResultService extends DefaultTinkerResultService {
             if (result.isSuccess) {
                 Toast.makeText(getApplicationContext(), "patch success, please restart process", Toast.LENGTH_LONG).show();
             } else {
-                Toast.makeText(getApplicationContext(), "patch fail, please check reason", Toast.LENGTH_LONG).show();
+//                Toast.makeText(getApplicationContext(), "patch fail, please check reason", Toast.LENGTH_LONG).show();
             }
         });
 
