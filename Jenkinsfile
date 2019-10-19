@@ -39,7 +39,7 @@ pipeline {
         }
 
         stage('Notify update') {
-            stage {
+            steps {
                 sh "./notifyUpdate instagramPatching"
             }
         }
