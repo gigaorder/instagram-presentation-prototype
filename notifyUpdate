@@ -14,8 +14,4 @@ topic=$1
 
 source ssh.cfg
 sshpass -p ${pwd} ssh ${usr}@${domain} "node $serverDir/patch_process/update.js $topic" && success=true
-if [[ "$success" = true ]]; then
-    echo notifyUpdate success
-else
-    echo notifyUpdate failed
-fi
+echo "done"
