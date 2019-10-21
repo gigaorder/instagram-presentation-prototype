@@ -126,42 +126,41 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                    .commit();
+            showImageSlideFragment();
         }
     };
 
     private BroadcastReceiver loginFailedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ConfigFragment(true))
-                    .commit();
+            showConfigFragment();
         }
     };
 
     private BroadcastReceiver noInternetReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ConfigFragment(true))
-                    .commit();
+            showConfigFragment();
         }
     };
+
+    private void showImageSlideFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                .commit();
+    }
+
+    private void showConfigFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_activity_fragment_container, new ConfigFragment(true))
+                .commit();
+    }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        finish();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
         finish();
     }
 
