@@ -164,6 +164,7 @@
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
             android:src="@mipmap/ic_launcher"
+            android:visibility="invisible"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
