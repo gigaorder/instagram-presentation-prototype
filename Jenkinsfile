@@ -22,7 +22,7 @@ pipeline {
 
         stage('Build APK') {
             steps {
-                sh "./gradlew clean build -x lint"
+                sh "./gradlew clean assembleDebug"
             }
         }
 
