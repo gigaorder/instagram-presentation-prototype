@@ -69,6 +69,8 @@
     <string name="pref_wifi_list">wifi_list</string>
     <string name="pref_is_wifi_connected">is_wifi_connected</string>
     <string name="pref_app_id">app_id</string>
+    <string name="pref_login_error_msg">login_error_msg</string>
+    <string name="pref_internet_available">internet_available</string>
 
     <!--Intent keys-->
     <string name="login_error_intent_key">loginErrorMsg</string>

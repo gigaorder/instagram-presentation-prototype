@@ -42,14 +42,9 @@ import butterknife.BindString;
 import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
-    @BindString(R.string.pref_instagram_source)
-    String instagramSourceUrlPrefKey;
-    @BindString(R.string.pref_instagram_source_tags)
-    String instagramSourceTagsPrefKey;
     @BindString(R.string.login_error_intent_key)
     String loginErrorMsgIntentKey;
 
-    private SharedPreferences sharedPreferences;
     private NanoHttpdWebServer webServer;
     private boolean configServerStarted;
     private WifiScanResultReceiver wifiScanResultReceiver;
@@ -74,19 +69,10 @@ public class MainActivity extends AppCompatActivity {
             LicenseUtil.initKeyIdFile();
         }
 
-        // Set fullscreen mode
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.hide();
+        setFullScreen();
 
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-
-        sharedPreferences = AppPreferencesUtil.getSharedPreferences();
-        String instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
-        String instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
 
         // Register Broadcast receivers
         IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
@@ -101,9 +87,12 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
 
+        IntentFilter ifNoInternet = new IntentFilter(Constants.NO_INTERNET_ACTION);
+        registerReceiver(noInternetReceiver, ifNoInternet);
+
         startConfigServer();
 
-        if (!deviceBoot && NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null)) {
+        if (!deviceBoot && AppPreferencesUtil.isAbleToDisplaySlideshow()) {
             getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
@@ -132,35 +121,42 @@ public class MainActivity extends AppCompatActivity {
 
     private void hotfixPluginSetup() {
         FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
-        new AsyncTask<Void, Void, Void>() {
-
-            @Override
-            protected Void doInBackground(Void... voids) {
-                PatchingUtil.checkForUpdate(Constant.DEFAULT_DOMAIN);
-                return null;
-            }
-        }.execute();
     }
 
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                    .commit();
+            showImageSlideFragment();
         }
     };
 
     private BroadcastReceiver loginFailedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ConfigFragment(true, intent.getStringExtra(loginErrorMsgIntentKey)))
-                    .commit();
+            showConfigFragment();
         }
     };
+
+    private BroadcastReceiver noInternetReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            showConfigFragment();
+        }
+    };
+
+    private void showImageSlideFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                .commit();
+    }
+
+    private void showConfigFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_activity_fragment_container, new ConfigFragment(true))
+                .commit();
+    }
 
     @Override
     public void onBackPressed() {
@@ -181,12 +177,16 @@ public class MainActivity extends AppCompatActivity {
         BroadcastReceiverUtil.unregisterReceiver(this, appPreferenceChangedReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, loginFailedReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, noInternetReceiver);
         webServer.stop();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private void setFullScreen() {
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.hide();
         getWindow().getDecorView().setSystemUiVisibility
                 ( View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION

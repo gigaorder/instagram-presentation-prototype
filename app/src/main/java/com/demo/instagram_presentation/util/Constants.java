@@ -25,6 +25,7 @@ public class Constants {
     public static final String PREFERENCE_CHANGED_ACTION = "PREFERENCE_CHANGED";
     public static final String LOGIN_INFO_CHANGED_ACTION = "LOGIN_INFO_CHANGED";
     public static final String LOGIN_FAILED_ACTION = "LOGIN_FAILED";
+    public static final String NO_INTERNET_ACTION = "NO_INTERNET";
 
     //License key constants
     public static final int BASE_KEY_SEED_MINIMUM_VALUE = 100;

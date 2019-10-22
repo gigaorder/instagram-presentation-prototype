@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -28,6 +29,8 @@ import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
+import com.demo.instagram_presentation.hotfix_plugin.Constant;
+import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.model.InstagramPostElement;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
@@ -145,6 +148,8 @@ public class ImageSlideFragment extends Fragment {
     String refreshIntervalPrefKey;
     @BindString(R.string.pref_required_login)
     String requiredLoginPrefKey;
+    @BindString(R.string.pref_login_error_msg)
+    String loginErrorMsgPrefKey;
     @BindString(R.string.source_url_error)
     String sourceUrlError;
     @BindString(R.string.timer_msg_server)
@@ -210,6 +215,9 @@ public class ImageSlideFragment extends Fragment {
 
     private Context context;
 
+    private final int MAX_REQUEST_COUNTER = 5;
+    private int sendRequestCounter = 0;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -221,6 +229,16 @@ public class ImageSlideFragment extends Fragment {
 
         // Bind context
         context = getContext();
+
+        // Check for update
+        new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                PatchingUtil.checkForUpdate(Constant.DEFAULT_DOMAIN);
+                return null;
+            }
+        }.execute();
     }
 
     @Override
@@ -230,7 +248,7 @@ public class ImageSlideFragment extends Fragment {
         ButterKnife.bind(this, fragmentRootView);
 
         webView.getSettings().setLoadsImagesAutomatically(false);
-        setServerInfo();
+        setServerInfo(false);
         startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
         getPreferences();
         initComponentsSize();
@@ -302,9 +320,17 @@ public class ImageSlideFragment extends Fragment {
                                 txtError.setText(errorInvalidSourceUrl);
                             } else {
                                 // Retry
-                                Bugfender.e(bugfenderTag, "Initial request failed due to network error, retrying...");
-                                handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
-                                startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
+                                sendRequestCounter++;
+                                if (sendRequestCounter < MAX_REQUEST_COUNTER) {
+                                    Bugfender.e(bugfenderTag, "Initial request failed due to network error, retrying...");
+                                    handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                                    startConfigServerMsgTimer(timerMessageForRetry, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL, txtError, false);
+                                } else {
+                                    Bugfender.e(bugfenderTag, "No internet connection");
+                                    AppPreferencesUtil.setFlagNoInternet();
+                                    Intent noInternetIntent = new Intent(Constants.NO_INTERNET_ACTION);
+                                    context.sendBroadcast(noInternetIntent);
+                                }
                             }
                             Bugfender.e(bugfenderTag, "Initial request error: " + err.getMessage());
                         }));
@@ -589,7 +615,7 @@ public class ImageSlideFragment extends Fragment {
         }.start();
     }
 
-    private void setServerInfo() {
+    private void setServerInfo(boolean showWifiUrl) {
         WifiManager wifiManager = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         WifiInfo info = wifiManager.getConnectionInfo();
         int ipAddress = info.getIpAddress();
@@ -600,7 +626,12 @@ public class ImageSlideFragment extends Fragment {
 
         String serverStatus = "Status: Online | ";
         String wifiSsid = String.format(Locale.ENGLISH, "Connected WiFi SSID: %s%n", ssid);
-        String configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d", formatedIpAddress, Constants.WEB_SERVER_PORT);
+        String configServerIp;
+        if (showWifiUrl) {
+            configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d/wifi", formatedIpAddress, Constants.WEB_SERVER_PORT);
+        } else {
+            configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d", formatedIpAddress, Constants.WEB_SERVER_PORT);
+        }
         String serverInfo = serverStatus + wifiSsid + configServerIp;
         txtServerInfo.setText(serverInfo);
     }
@@ -678,12 +709,12 @@ public class ImageSlideFragment extends Fragment {
             Bugfender.e(bugfenderTag, "Login failed");
             SharedPreferences.Editor prefEditor = sharedPreferences.edit();
             prefEditor.putBoolean(requiredLoginPrefKey, true);
+            prefEditor.putString(loginErrorMsgPrefKey, loginErrorReason);
             prefEditor.apply();
 
             handler.removeCallbacks(imagePresentationLoader);
 
             Intent loginFailedIntent = new Intent(Constants.LOGIN_FAILED_ACTION);
-            loginFailedIntent.putExtra(context.getResources().getString(R.string.login_error_intent_key), loginErrorReason);
             context.sendBroadcast(loginFailedIntent);
         }
     };

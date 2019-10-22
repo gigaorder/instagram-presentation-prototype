@@ -9,6 +9,7 @@ import android.net.wifi.WifiManager;
 import androidx.preference.PreferenceManager;
 
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.webserver.model.NetworkLoginInfo;
 import com.demo.instagram_presentation.webserver.util.RequestUtil;
 import com.google.gson.Gson;
@@ -68,6 +69,11 @@ public class WifiController {
         conf.SSID = "\"" + networkLoginInfo.getSsid() + "\"";
         conf.preSharedKey = "\"" + StringEscapeUtils.escapeJava(networkLoginInfo.getPassphrase()) + "\"";
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        //forget all other wifi connections first
+        for (WifiConfiguration networkConfig : wifiManager.getConfiguredNetworks()) {
+            wifiManager.removeNetwork(networkConfig.networkId);
+        }
+        wifiManager.saveConfiguration();
         wifiManager.addNetwork(conf);
 
         List<WifiConfiguration> networkConfigs = wifiManager.getConfiguredNetworks();
@@ -78,6 +84,7 @@ public class WifiController {
                     wifiManager.disconnect();
                     wifiManager.enableNetwork(networkConfig.networkId, true);
                     wifiManager.reconnect();
+                    AppPreferencesUtil.setFlagInternetAvailable();
                     break;
                 } catch (Exception e) {
                     e.printStackTrace();

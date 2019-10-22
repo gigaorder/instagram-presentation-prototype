@@ -1,6 +1,7 @@
 package com.demo.instagram_presentation.fragment;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -82,6 +83,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     String instagramSourceTagsPrefKey;
     @BindString(R.string.pref_required_login)
     String requiredLoginPrefKey;
+    @BindString(R.string.pref_login_error_msg)
+    String loginErrorPrefKey;
     @BindString(R.string.app_info_text)
     String appInfoMsg;
 
@@ -97,7 +100,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private String instagramSourceUrl;
     private String instagramSourceTags;
     private boolean isRequiredLogin;
-    private String loginErrorMsg;
+
+    private CountDownTimer configServerTimer;
 
     public ConfigFragment() {
     }
@@ -106,10 +110,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         this.configServerStarted = configServerStarted;
     }
 
-    public ConfigFragment(boolean configServerStarted, String loginErrorMsg) {
-        this.configServerStarted = configServerStarted;
-        this.loginErrorMsg = loginErrorMsg;
-    }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -145,7 +145,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
             @Override
             public void onFinish() {
-                if (NetworkUtil.isWifiConnected() && (instagramSourceUrl != null || instagramSourceTags != null) && !isRequiredLogin) {
+                if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
                     // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
                     getFragmentManager()
                             .beginTransaction()
@@ -153,6 +153,10 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                             .commit();
                 } else {
                     if (configServerStarted) {
+                        wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
+                        IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+                        getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
+
                         if (NetworkUtil.isWifiConnected()) {
                             setServerInfoOnWifi();
                             setErrorMsg();
@@ -161,7 +165,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
                             sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, false).apply();
                             // Turn on wifi and start scanning
-                            wifiManager.setWifiEnabled(true);
+                            if (!wifiManager.isWifiEnabled()) {
+                                wifiManager.setWifiEnabled(true);
+                            }
 
                             // Start Wi-Fi Direct
                             // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
@@ -174,9 +180,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                             handler.postDelayed(() ->
                                     wifiP2pManager.requestGroupInfo(wifiP2pChannel, wifiP2pInfoListener), 5000);
 
-                            wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
-                            IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-                            getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
                             wifiManager.startScan();
                         }
                     } else {
@@ -197,7 +200,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         } else if (instagramSourceUrl == null && instagramSourceTags == null) {
             txtError.setText(errorSourceUrlNotSet);
         } else if (isRequiredLogin) {
-            txtError.setText(loginErrorMsg);
+            txtError.setText(sharedPreferences.getString(loginErrorPrefKey, "Login error"));
+        } else if (!AppPreferencesUtil.isInternetAvailable()) {
+            txtError.setText("Internet is not available.\nPlease change wifi connection.");
         }
     }
 
@@ -233,7 +238,11 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private void startConfigServerMsgTimer(boolean isOnWifi) {
         int length = isOnWifi ? Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY : Constants.HIDE_SERVER_INFO_ON_WIFI_DIRECT_DELAY;
 
-        new CountDownTimer(length, 1000) {
+        if (configServerTimer != null) {
+            configServerTimer.cancel();
+        }
+
+        configServerTimer = new CountDownTimer(length, 1000) {
             @Override
             public void onTick(long l) {
                 txtTimer.setText(String.format("This message will disappear in %d seconds", l / 1000));
@@ -301,30 +310,31 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
     @Override
     public void onWifiConnected() {
+        wifiConnected = sharedPreferences.getBoolean(isWifiConnectedPrefKey, false);
         if (!wifiConnected) {
             wifiConnected = true;
             txtServerInfo.setText(wifiDetectedMsg);
             sharedPreferences.edit().putBoolean(isWifiConnectedPrefKey, true).apply();
-
-            Handler handler = new Handler();
-
-            handler.postDelayed(() -> {
-
-                if (wifiP2pChannel != null) {
-                    wifiP2pManager.removeGroup(wifiP2pChannel, null);
-                }
-
-                if (instagramSourceUrl != null || instagramSourceTags != null) {
-                    getFragmentManager()
-                            .beginTransaction()
-                            .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                            .commit();
-                } else {
-                    setServerInfoOnWifi();
-                    setErrorMsg();
-                }
-            }, 10000);
         }
+
+        Handler handler = new Handler();
+
+        handler.postDelayed(() -> {
+
+            if (wifiP2pChannel != null) {
+                wifiP2pManager.removeGroup(wifiP2pChannel, null);
+            }
+
+            if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
+                getFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
+                        .commit();
+            } else {
+                setServerInfoOnWifi();
+                setErrorMsg();
+            }
+        }, 10000);
     }
 
     @Override
