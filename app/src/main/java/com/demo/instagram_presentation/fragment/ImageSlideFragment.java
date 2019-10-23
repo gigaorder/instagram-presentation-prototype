@@ -235,7 +235,8 @@ public class ImageSlideFragment extends Fragment {
 
             @Override
             protected Void doInBackground(Void... voids) {
-                PatchingUtil.checkForUpdate(Constant.DEFAULT_DOMAIN);
+                String domain = AppPreferencesUtil.getSharedPreferences().getString(Constant.DOMAIN_KEY, Constant.DEFAULT_DOMAIN);
+                PatchingUtil.checkForUpdate(domain);
                 return null;
             }
         }.execute();

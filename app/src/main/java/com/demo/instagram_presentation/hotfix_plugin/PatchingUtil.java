@@ -66,6 +66,7 @@ public class PatchingUtil {
 
     private static void initUrl(String domain) {
         SharedPreferences sharedPreferences = AppPreferencesUtil.getSharedPreferences();
+        sharedPreferences.edit().putString(Constant.DOMAIN_KEY, domain).apply();
         Tinker tinker = Tinker.with(InstagramApplicationContext.context);
         if (!tinker.isTinkerLoaded()) {
             sharedPreferences.edit().putString("originalVersion", BuildConfig.VERSION_NAME).apply();
