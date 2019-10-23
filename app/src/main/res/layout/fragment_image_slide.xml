@@ -143,12 +143,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <WebView
-        android:id="@+id/fragment_present_webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible" />
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/fragment_present_layout_user_section"
         android:layout_width="match_parent"
@@ -180,4 +174,35 @@
             app:layout_constraintStart_toEndOf="@id/fragment_present_imgProfile"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <WebView
+        android:id="@+id/fragment_present_webView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/fragment_present_txtLoginError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="@string/require_login_code"
+        android:textAlignment="center"
+        android:background="#FFF"
+        android:padding="10dp"
+        android:textSize="14pt"
+        android:textColor="@color/colorAccent"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/fragment_present_btnLoadUrl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Refresh"
+        android:textSize="14pt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -93,7 +93,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private WifiP2pManager.Channel wifiP2pChannel;
     private WifiManager wifiManager;
     private WifiConnectReceiver wifiConnectReceiver;
-    private Activity rootActivity;
     private boolean configServerStarted;
     private boolean wifiConnected;
     private ConfigFragment thisFragment;
@@ -116,7 +115,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         // Inflate the layout for this fragment
         View fragmentRootView = inflater.inflate(R.layout.fragment_config, container, false);
         ButterKnife.bind(this, fragmentRootView);
-        rootActivity = getActivity();
         thisFragment = this;
 
         // Load background images
@@ -125,12 +123,12 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         Picasso.get().load(R.drawable.rockiton).centerCrop().fit().noFade().into(imgLogo);
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
-        wifiManager = (WifiManager) rootActivity.getApplicationContext().getSystemService(WIFI_SERVICE);
+        wifiManager = (WifiManager) MainActivity.self.getApplicationContext().getSystemService(WIFI_SERVICE);
         instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
         instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
         isRequiredLogin = sharedPreferences.getBoolean(requiredLoginPrefKey, false);
 
-        AppPreferencesUtil.setDefaultImageSize(rootActivity);
+        AppPreferencesUtil.setDefaultImageSize();
 
         txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
@@ -155,7 +153,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                     if (configServerStarted) {
                         wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
                         IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-                        getContext().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
+                        MainActivity.self.registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
 
                         if (NetworkUtil.isWifiConnected()) {
                             setServerInfoOnWifi();
@@ -171,9 +169,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
                             // Start Wi-Fi Direct
                             // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
-                            wifiP2pManager = (WifiP2pManager) rootActivity.getSystemService(WIFI_P2P_SERVICE);
-                            wifiP2pChannel = wifiP2pManager.initialize(rootActivity.getApplicationContext(),
-                                    rootActivity.getMainLooper(), null);
+                            wifiP2pManager = (WifiP2pManager) MainActivity.self.getSystemService(WIFI_P2P_SERVICE);
+                            wifiP2pChannel = wifiP2pManager.initialize(MainActivity.self.getApplicationContext(),
+                                    MainActivity.self.getMainLooper(), null);
                             wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
 
                             // Delay because Wi-Fi Direct may not be initialized immediately
@@ -238,23 +236,21 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private void startConfigServerMsgTimer(boolean isOnWifi) {
         int length = isOnWifi ? Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY : Constants.HIDE_SERVER_INFO_ON_WIFI_DIRECT_DELAY;
 
-        if (configServerTimer != null) {
-            configServerTimer.cancel();
+        if (configServerTimer == null) {
+            configServerTimer = new CountDownTimer(length, 1000) {
+                @Override
+                public void onTick(long l) {
+                    txtTimer.setText(String.format("This message will disappear in %d seconds", l / 1000));
+                }
+
+                @Override
+                public void onFinish() {
+                    hideServerInfoText();
+                }
+            }.start();
+
+            txtTimer.setVisibility(View.VISIBLE);
         }
-
-        configServerTimer = new CountDownTimer(length, 1000) {
-            @Override
-            public void onTick(long l) {
-                txtTimer.setText(String.format("This message will disappear in %d seconds", l / 1000));
-            }
-
-            @Override
-            public void onFinish() {
-                hideServerInfoText();
-            }
-        }.start();
-
-        txtTimer.setVisibility(View.VISIBLE);
     }
 
     private WifiP2pManager.ActionListener onWifiDirectStartedListener = new WifiP2pManager.ActionListener() {
@@ -326,7 +322,8 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             }
 
             if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
-                getFragmentManager()
+                MainActivity.self
+                        .getSupportFragmentManager()
                         .beginTransaction()
                         .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
                         .commit();
@@ -345,6 +342,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             wifiP2pManager.removeGroup(wifiP2pChannel, null);
         }
 
-        BroadcastReceiverUtil.unregisterReceiver(getContext(), wifiConnectReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, wifiConnectReceiver);
     }
 }

@@ -14,6 +14,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -28,6 +30,7 @@ import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.activity.MainActivity;
+import com.demo.instagram_presentation.data.scraper.InstagramLogin;
 import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
 import com.demo.instagram_presentation.hotfix_plugin.Constant;
 import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
@@ -91,6 +94,10 @@ public class ImageSlideFragment extends Fragment {
     WebView webView;
     @BindView(R.id.fragment_present_imgNetworkStrength)
     ImageView imgNetworkStrength;
+    @BindView(R.id.fragment_present_txtLoginError)
+    TextView txtLoginError;
+    @BindView(R.id.fragment_present_btnLoadUrl)
+    Button btnLoadUrl;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -700,23 +707,44 @@ public class ImageSlideFragment extends Fragment {
         handler.removeCallbacks(imagePresentationLoader);
     }
 
-    private InstagramWebScraper.InstagramLoginListener loginListener = (success, loginErrorReason) -> {
+    private void toggleDisplayingWebview(boolean isDisplayed) {
+        if (isDisplayed) {
+            webView.setVisibility(View.VISIBLE);
+            txtLoginError.setVisibility(View.VISIBLE);
+            btnLoadUrl.setVisibility(View.VISIBLE);
+            if (!btnLoadUrl.hasOnClickListeners()) {
+                btnLoadUrl.setOnClickListener((view) -> webView.loadUrl(webView.getUrl()));
+            }
+        } else {
+            webView.setVisibility(View.INVISIBLE);
+            txtLoginError.setVisibility(View.GONE);
+            btnLoadUrl.setVisibility(View.GONE);
+        }
+    }
+
+    private InstagramWebScraper.InstagramLoginListener loginListener = (success, loginCode, loginErrorReason) -> {
         if (success) {
             SharedPreferences.Editor prefEditor = sharedPreferences.edit();
             prefEditor.putBoolean(requiredLoginPrefKey, false);
             prefEditor.apply();
+            toggleDisplayingWebview(false);
             startFetchingPosts();
         } else {
             Bugfender.e(bugfenderTag, "Login failed");
-            SharedPreferences.Editor prefEditor = sharedPreferences.edit();
-            prefEditor.putBoolean(requiredLoginPrefKey, true);
-            prefEditor.putString(loginErrorMsgPrefKey, loginErrorReason);
-            prefEditor.apply();
+            if (loginCode == InstagramLogin.LOGIN_CHALLENGE_CODE) {
+                toggleDisplayingWebview(true);
+            } else {
+                toggleDisplayingWebview(false);
+                SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+                prefEditor.putBoolean(requiredLoginPrefKey, true);
+                prefEditor.putString(loginErrorMsgPrefKey, loginErrorReason);
+                prefEditor.apply();
 
-            handler.removeCallbacks(imagePresentationLoader);
+                handler.removeCallbacks(imagePresentationLoader);
 
-            Intent loginFailedIntent = new Intent(Constants.LOGIN_FAILED_ACTION);
-            context.sendBroadcast(loginFailedIntent);
+                Intent loginFailedIntent = new Intent(Constants.LOGIN_FAILED_ACTION);
+                context.sendBroadcast(loginFailedIntent);
+            }
         }
     };
 

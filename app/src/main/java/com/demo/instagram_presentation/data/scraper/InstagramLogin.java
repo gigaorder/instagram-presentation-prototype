@@ -2,7 +2,6 @@ package com.demo.instagram_presentation.data.scraper;
 
 import android.os.Build;
 import android.os.Handler;
-import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
 import android.webkit.WebView;
@@ -15,9 +14,16 @@ import com.demo.instagram_presentation.util.Constants;
 public class InstagramLogin {
     private final String TAG = MainActivity.DEVICE_ID;
 
-    private final String ACCOUNT_INFO_INCORRECT = "Login username or password is not correct.\nPlease provide correct info on config website.";
-    private final String ACCOUNT_INFO_EMPTY = "Require instagram account to get post data.\nPlease provide login info on config website.";
-    private final String REQUIRE_SECURITY_CODE = "Login action requires security code.\nPlease try another account.";
+    public static final int LOGIN_SUCCESS = 0;
+
+    public static final int ACCOUNT_INFO_INCORRECT_CODE = -1;
+    private final String ACCOUNT_INFO_INCORRECT_MSG = "Login username or password is not correct.\nPlease provide correct info on config website.";
+
+    public static final int ACCOUNT_INFO_EMPTY_CODE = -2;
+    private final String ACCOUNT_INFO_EMPTY_MSG = "Require instagram account to get post data.\nPlease provide login info on config website.";
+
+    public static final int LOGIN_CHALLENGE_CODE = -3;
+    private final String LOGIN_CHALLENGE_MSG = "Login action requires security code.\nPlease try another account.";
 
     private String username;
     private String password;
@@ -47,19 +53,18 @@ public class InstagramLogin {
                             if (verifySuccess) {
                                 firstStepLoginSuccess = true;
                             } else if(username.isEmpty() || password.isEmpty()) {
-                                executingLoginListener.onFinish(new LoginStatus(false, ACCOUNT_INFO_EMPTY));
+                                executingLoginListener.onFinish(new LoginStatus(false, ACCOUNT_INFO_EMPTY_CODE, ACCOUNT_INFO_EMPTY_MSG));
                             } else {
-                                executingLoginListener.onFinish(new LoginStatus(false, ACCOUNT_INFO_INCORRECT));
+                                executingLoginListener.onFinish(new LoginStatus(false, ACCOUNT_INFO_INCORRECT_CODE, ACCOUNT_INFO_INCORRECT_MSG));
                             }
                         });
                     }, 1000);
                 } else if (firstStepLoginSuccess && !webViewUrl.contains("challenge")) {
                     // when login success , this page will redirect to homepage
-                    executingLoginListener.onFinish(new LoginStatus(true, null));
+                    executingLoginListener.onFinish(new LoginStatus(true, LOGIN_SUCCESS, ""));
                 } else {
                     // when instagram prevent ddos, this page will redirect to page challenge (security code required)
-                    //todo : handle this case
-                    executingLoginListener.onFinish(new LoginStatus(false, REQUIRE_SECURITY_CODE));
+                    executingLoginListener.onFinish(new LoginStatus(false, LOGIN_CHALLENGE_CODE, LOGIN_CHALLENGE_MSG));
                 }
             }
         });
@@ -154,10 +159,12 @@ public class InstagramLogin {
 
     class LoginStatus {
         boolean success;
+        int code;
         String message;
 
-        public LoginStatus(boolean success, String message) {
+        public LoginStatus(boolean success, int code, String message) {
             this.success = success;
+            this.code = code;
             this.message = message;
         }
     }

@@ -36,7 +36,7 @@ public class AppPreferencesUtil {
         return sharedPreferences;
     }
 
-    public static void setDefaultImageSize(Activity activity) {
+    public static void setDefaultImageSize() {
         if (sharedPreferences.getString(imgMainWidthPrefKey, null) == null) {
             int width = ScreenUtil.getScreenWidth();
             sharedPreferences.edit().putString(imgMainWidthPrefKey, String.valueOf(width)).apply();

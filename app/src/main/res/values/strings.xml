@@ -23,6 +23,8 @@
     <string name="progress_getting_user_info">Getting data from Instagram</string>
     <string name="progress_done">All done!</string>
 
+    <string name="require_login_code">Require security code</string>
+
     <!--Preferences keys, summaries and titles-->
     <string name="pref_instagram_source">instagram_source</string>
     <string name="pref_instagram_source_tags">instagram_source_tags</string>

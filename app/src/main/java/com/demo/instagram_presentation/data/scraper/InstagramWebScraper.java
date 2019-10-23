@@ -32,9 +32,9 @@ public class InstagramWebScraper {
             if (redirected) {
                 instagramLogin.executeLoginInstagram((loginStatus) -> {
                     if (loginStatus.success) {
-                        instagramLoginListener.onFinish(true, null);
+                        instagramLoginListener.onFinish(true, loginStatus.code, "");
                     } else {
-                        instagramLoginListener.onFinish(false, loginStatus.message);
+                        instagramLoginListener.onFinish(false, loginStatus.code, loginStatus.message);
                     }
                 });
             } else if (startGettingPost) {
@@ -48,7 +48,7 @@ public class InstagramWebScraper {
     }
 
     public interface InstagramLoginListener {
-        void onFinish(boolean success, String loginErrorMessage);
+        void onFinish(boolean success, int loginCode, String loginErrorMessage);
     }
 
     public interface HtmlExtractionListener {
