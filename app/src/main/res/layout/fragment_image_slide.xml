@@ -157,7 +157,7 @@
         android:id="@+id/fragment_present_webView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone" />
+        android:visibility="invisible" />
 
     <TextView
         android:id="@+id/fragment_present_txtLoginError"
