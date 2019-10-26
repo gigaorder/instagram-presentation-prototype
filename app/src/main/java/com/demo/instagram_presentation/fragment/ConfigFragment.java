@@ -33,6 +33,7 @@ import com.demo.instagram_presentation.listener.WifiConnectListener;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
+import com.demo.instagram_presentation.util.FragmentUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
 import com.squareup.picasso.Picasso;
 
@@ -145,10 +146,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             public void onFinish() {
                 if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
                     // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
-                    getFragmentManager()
-                            .beginTransaction()
-                            .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                            .commit();
+                    FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.self);
                 } else {
                     if (configServerStarted) {
                         wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
@@ -284,7 +282,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             String serverStatus = "Status: Online\n";
             String wifiDirectSsid = String.format("WiFi Direct SSID: \"%s\" | ", p2pNetworkName);
             String password = String.format("Password: \"%s\"\n", passphrase);
-            String configServerIp = String.format("Config server: 192.168.49.1:%d/wifi", Constants.WEB_SERVER_PORT, Constants.WEB_SERVER_PORT);
+            String configServerIp = String.format("Config server: 192.168.49.1:%d/wifi", Constants.WEB_SERVER_PORT);
 
             int prevLength1 = serverStatus.length() + wifiDirectSsid.length();
             int prevLengthTotal = prevLength1 + password.length();
@@ -322,11 +320,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             }
 
             if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
-                MainActivity.self
-                        .getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                        .commit();
+                FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.self);
             } else {
                 setServerInfoOnWifi();
                 setErrorMsg();

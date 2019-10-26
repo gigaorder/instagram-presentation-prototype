@@ -22,6 +22,7 @@ import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.hotfix_plugin.Constant;
 import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
+import com.demo.instagram_presentation.util.FragmentUtil;
 import com.demo.instagram_presentation.util.PermissionUtil;
 import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
@@ -93,15 +94,9 @@ public class MainActivity extends AppCompatActivity {
         startConfigServer();
 
         if (!deviceBoot && AppPreferencesUtil.isAbleToDisplaySlideshow()) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                    .commit();
+            FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, this);
         } else {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_activity_fragment_container, new ConfigFragment(configServerStarted))
-                    .commit();
+            FragmentUtil.showConfigFragment(R.id.main_activity_fragment_container, this, configServerStarted);
         }
 
         PermissionUtil.askForRequiredPermissions();
@@ -126,37 +121,23 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            showImageSlideFragment();
+            FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.this);
         }
     };
 
     private BroadcastReceiver loginFailedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            showConfigFragment();
+            FragmentUtil.showConfigFragment(R.id.main_activity_fragment_container, MainActivity.this, configServerStarted);
         }
     };
 
     private BroadcastReceiver noInternetReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            showConfigFragment();
+            FragmentUtil.showConfigFragment(R.id.main_activity_fragment_container, MainActivity.this, configServerStarted);
         }
     };
-
-    private void showImageSlideFragment() {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.main_activity_fragment_container, new ImageSlideFragment())
-                .commit();
-    }
-
-    private void showConfigFragment() {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.main_activity_fragment_container, new ConfigFragment(true))
-                .commit();
-    }
 
     @Override
     public void onBackPressed() {

@@ -707,11 +707,22 @@ public class ImageSlideFragment extends Fragment {
         handler.removeCallbacks(imagePresentationLoader);
     }
 
-    BroadcastReceiver submitSecurityCodeReceiver;
-    IntentFilter submitSecurityCodeAction;
+    BroadcastReceiver submitSecurityCodeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String code = intent.getStringExtra("securityCode");
+            instagramWebScraper.submitSecurityCode(code);
+        }
+    };
+    IntentFilter submitSecurityCodeAction = new IntentFilter(Constants.SUBMIT_SECURITY_CODE_ACTION);
 
-    BroadcastReceiver getNewSecurityCodeReceiver;
-    IntentFilter getNewSecurityCodeAction;
+    BroadcastReceiver getNewSecurityCodeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            instagramWebScraper.getNewSecurityCode();
+        }
+    };
+    IntentFilter getNewSecurityCodeAction = new IntentFilter(Constants.REQUEST_GET_NEW_SECURITY_CODE_ACTION);
 
     private void toggleDisplayingWebview(boolean isDisplayed) {
         if (isDisplayed) {
@@ -725,39 +736,14 @@ public class ImageSlideFragment extends Fragment {
                 startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
             }
 
-            if (submitSecurityCodeReceiver == null) {
-                submitSecurityCodeReceiver = new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        String code = intent.getStringExtra("securityCode");
-                        instagramWebScraper.submitSecurityCode(code);
-                    }
-                };
-                submitSecurityCodeAction = new IntentFilter(Constants.SUBMIT_SECURITY_CODE_ACTION);
-                MainActivity.self.registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
-            }
-
-            if (getNewSecurityCodeReceiver == null) {
-                getNewSecurityCodeReceiver = new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        instagramWebScraper.getNewSecurityCode();
-                    }
-                };
-                getNewSecurityCodeAction = new IntentFilter(Constants.REQUEST_GET_NEW_SECURITY_CODE_ACTION);
-                MainActivity.self.registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
-            }
+            MainActivity.self.registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
+            MainActivity.self.registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
         } else {
             webView.setVisibility(View.INVISIBLE);
             txtLoginError.setVisibility(View.GONE);
 
-            if (submitSecurityCodeReceiver != null) {
-                BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
-            }
-
-            if (getNewSecurityCodeReceiver != null) {
-                BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
-            }
+            BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
+            BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
         }
     }
 
@@ -966,5 +952,13 @@ public class ImageSlideFragment extends Fragment {
 //        log.debug("availHeapSizeInMB: " + availHeapSizeInMB + "MB");
 
         Bugfender.d(bugfenderTag, "Heap usage: " + usedMemInMB + "/" + maxHeapSizeInMB + "MB");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
     }
 }
