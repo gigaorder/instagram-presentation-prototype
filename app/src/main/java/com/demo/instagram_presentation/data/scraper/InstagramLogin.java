@@ -64,7 +64,9 @@ public class InstagramLogin {
                     executingLoginListener.onFinish(new LoginStatus(true, LOGIN_SUCCESS, ""));
                 } else {
                     // when instagram prevent ddos, this page will redirect to page challenge (security code required)
+                    // this code will be called multiple times until challenge page is loaded fully
                     executingLoginListener.onFinish(new LoginStatus(false, LOGIN_CHALLENGE_CODE, LOGIN_CHALLENGE_MSG));
+                    sendSecurityCodeToEmail();
                 }
             }
         });
@@ -149,8 +151,8 @@ public class InstagramLogin {
         }
     }
 
-    private interface JobFinishedStatus {
-        void finish(boolean status);
+    public interface JobFinishedStatus {
+        void finish(boolean success);
     }
 
     public interface ExecutingLoginListener {
@@ -168,4 +170,73 @@ public class InstagramLogin {
             this.message = message;
         }
     }
+
+    private void sendSecurityCodeToEmail() {
+        String clickSendEmailButtonScript = "(function () {\n" +
+                "  try {\n" +
+                "    var receiveEmailBtn = document.forms[0].getElementsByTagName('button')[0];\n" +
+                "    if (receiveEmailBtn === undefined) {\n" +
+                "      return false\n" +
+                "    } else {\n" +
+                "      receiveEmailBtn.click();\n" +
+                "      return true;\n" +
+                "    }\n" +
+                "  } catch (e) {\n" +
+                "    return false;\n" +
+                "  }\n" +
+                "})();";
+
+        webView.evaluateJavascript(clickSendEmailButtonScript, (clickSuccess) -> {
+            if (clickSuccess.equals("false")) {
+                String loginChallengeUrl = webView.getUrl();
+                webView.loadUrl(loginChallengeUrl);
+            } else {
+                String checkSendEmailSuccessScript = "(function () {return document.getElementById('form_error') ? false : true})();";
+                webView.evaluateJavascript(checkSendEmailSuccessScript, (sendEmailSuccess) -> {
+                    if (sendEmailSuccess.equals("fasle")) {
+                        new Handler().postDelayed(this::sendSecurityCodeToEmail, 1000);
+                    }
+                });
+            }
+        });
+    }
+
+    public void getNewSecurityCode() {
+        webView.evaluateJavascript("(function () { _replay() })()", (__) -> {});
+    }
+
+    public void executeSubmitSecurityCodeWithJSCode(String code) {
+        String submitSecurityCodeScript = String.format("(function () {\n" +
+                "  var forms = document.forms;\n" +
+                "  var codeField;\n" +
+                "  var submitBtn;\n" +
+                "  for (i = 0; i < forms.length; i++) {\n" +
+                "    if (forms[i].security_code !== undefined) {\n" +
+                "      codeField = forms[i].security_code;\n" +
+                "      submitBtn = forms[i].getElementsByTagName('button')[0];\n" +
+                "    }\n" +
+                "  }\n" +
+                "\n" +
+                "  if (codeField === undefined || submitBtn === undefined) {\n" +
+                "    return false;\n" +
+                "  }\n" +
+                "\n" +
+                "  var event = new Event('input', { bubbles: true });\n" +
+                "  event.simulated = true;\n" +
+                "\n" +
+                "  var lastCodeValue = codeField.value;\n" +
+                "  codeField.value = '%s';\n" +
+                "\n" +
+                "  var codeTracker = codeField._valueTracker;\n" +
+                "  if (codeTracker) {\n" +
+                "    codeTracker.setValue(lastCodeValue)\n" +
+                "  }\n" +
+                "  codeField.dispatchEvent(event);\n" +
+                "  submitBtn.click();\n" +
+                "  return true;\n" +
+                "})();", code);
+
+        webView.evaluateJavascript(submitSecurityCodeScript, (__) -> {});
+    }
+
 }

@@ -1,7 +1,9 @@
 package com.demo.instagram_presentation.fragment;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -9,13 +11,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -28,6 +28,8 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
+import com.demo.instagram_presentation.InstagramApplicationContext;
+import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.data.scraper.InstagramLogin;
@@ -37,6 +39,7 @@ import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.demo.instagram_presentation.model.InstagramPostElement;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
+import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
@@ -49,11 +52,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -96,8 +97,6 @@ public class ImageSlideFragment extends Fragment {
     ImageView imgNetworkStrength;
     @BindView(R.id.fragment_present_txtLoginError)
     TextView txtLoginError;
-    @BindView(R.id.fragment_present_btnLoadUrl)
-    Button btnLoadUrl;
 
     @BindString(R.string.source_url_not_set)
     String errorSourceUrlNotSet;
@@ -155,6 +154,8 @@ public class ImageSlideFragment extends Fragment {
     String refreshIntervalPrefKey;
     @BindString(R.string.pref_required_login)
     String requiredLoginPrefKey;
+    @BindString(R.string.pref_required_security_code)
+    String requiredSecurityCodePrefKey;
     @BindString(R.string.pref_login_error_msg)
     String loginErrorMsgPrefKey;
     @BindString(R.string.source_url_error)
@@ -256,7 +257,7 @@ public class ImageSlideFragment extends Fragment {
         ButterKnife.bind(this, fragmentRootView);
 
         webView.getSettings().setLoadsImagesAutomatically(false);
-        setServerInfo(false);
+        setServerInfo("");
         startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
         getPreferences();
         initComponentsSize();
@@ -623,8 +624,11 @@ public class ImageSlideFragment extends Fragment {
         }.start();
     }
 
-    private void setServerInfo(boolean showWifiUrl) {
-        WifiManager wifiManager = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+    private void setServerInfo(String route) {
+        WifiManager wifiManager = (WifiManager) InstagramApplicationContext.context.getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager == null) {
+            return;
+        }
         WifiInfo info = wifiManager.getConnectionInfo();
         int ipAddress = info.getIpAddress();
         String ssid = info.getSSID();
@@ -635,11 +639,7 @@ public class ImageSlideFragment extends Fragment {
         String serverStatus = "Status: Online | ";
         String wifiSsid = String.format(Locale.ENGLISH, "Connected WiFi SSID: %s%n", ssid);
         String configServerIp;
-        if (showWifiUrl) {
-            configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d/wifi", formatedIpAddress, Constants.WEB_SERVER_PORT);
-        } else {
-            configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d", formatedIpAddress, Constants.WEB_SERVER_PORT);
-        }
+        configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d/%s", formatedIpAddress, Constants.WEB_SERVER_PORT, route);
         String serverInfo = serverStatus + wifiSsid + configServerIp;
         txtServerInfo.setText(serverInfo);
     }
@@ -707,18 +707,57 @@ public class ImageSlideFragment extends Fragment {
         handler.removeCallbacks(imagePresentationLoader);
     }
 
+    BroadcastReceiver submitSecurityCodeReceiver;
+    IntentFilter submitSecurityCodeAction;
+
+    BroadcastReceiver getNewSecurityCodeReceiver;
+    IntentFilter getNewSecurityCodeAction;
+
     private void toggleDisplayingWebview(boolean isDisplayed) {
         if (isDisplayed) {
             webView.setVisibility(View.VISIBLE);
             txtLoginError.setVisibility(View.VISIBLE);
-            btnLoadUrl.setVisibility(View.VISIBLE);
-            if (!btnLoadUrl.hasOnClickListeners()) {
-                btnLoadUrl.setOnClickListener((view) -> webView.loadUrl(webView.getUrl()));
+
+            if (txtServerInfo.getVisibility() == View.GONE) {
+                txtServerInfo.setVisibility(View.VISIBLE);
+                txtTimer.setVisibility(View.VISIBLE);
+                setServerInfo("authorize");
+                startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
+            }
+
+            if (submitSecurityCodeReceiver == null) {
+                submitSecurityCodeReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        String code = intent.getStringExtra("securityCode");
+                        instagramWebScraper.submitSecurityCode(code);
+                    }
+                };
+                submitSecurityCodeAction = new IntentFilter(Constants.SUBMIT_SECURITY_CODE_ACTION);
+                MainActivity.self.registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
+            }
+
+            if (getNewSecurityCodeReceiver == null) {
+                getNewSecurityCodeReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        instagramWebScraper.getNewSecurityCode();
+                    }
+                };
+                getNewSecurityCodeAction = new IntentFilter(Constants.REQUEST_GET_NEW_SECURITY_CODE_ACTION);
+                MainActivity.self.registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
             }
         } else {
             webView.setVisibility(View.INVISIBLE);
             txtLoginError.setVisibility(View.GONE);
-            btnLoadUrl.setVisibility(View.GONE);
+
+            if (submitSecurityCodeReceiver != null) {
+                BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
+            }
+
+            if (getNewSecurityCodeReceiver != null) {
+                BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
+            }
         }
     }
 
@@ -733,6 +772,7 @@ public class ImageSlideFragment extends Fragment {
             Bugfender.e(bugfenderTag, "Login failed");
             if (loginCode == InstagramLogin.LOGIN_CHALLENGE_CODE) {
                 toggleDisplayingWebview(true);
+                sharedPreferences.edit().putBoolean(requiredSecurityCodePrefKey, true).apply();
             } else {
                 toggleDisplayingWebview(false);
                 SharedPreferences.Editor prefEditor = sharedPreferences.edit();

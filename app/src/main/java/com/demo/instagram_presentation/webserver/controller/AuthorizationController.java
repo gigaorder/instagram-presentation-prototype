@@ -2,6 +2,7 @@ package com.demo.instagram_presentation.webserver.controller;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 
@@ -12,6 +13,7 @@ import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 import com.demo.instagram_presentation.webserver.model.InstagramAccount;
 import com.demo.instagram_presentation.webserver.model.AuthorizationInfo;
+import com.demo.instagram_presentation.webserver.model.SecurityCode;
 import com.google.gson.Gson;
 
 import java.io.IOException;
@@ -30,6 +32,7 @@ public class AuthorizationController {
     private String requiredLoginPrefKey;
     private String instagramUsernamePrefKey;
     private String instagramPasswordPrefKey;
+    private String requiredSecurityCodePrefKey;
     private Context context;
 
     public AuthorizationController(AssetManager assetManager, ErrorController errorController, Context context) {
@@ -41,6 +44,7 @@ public class AuthorizationController {
         requiredLoginPrefKey = context.getResources().getString(R.string.pref_required_login);
         instagramUsernamePrefKey = context.getResources().getString(R.string.pref_instagram_username);
         instagramPasswordPrefKey = context.getResources().getString(R.string.pref_instagram_password);
+        requiredSecurityCodePrefKey = context.getResources().getString(R.string.pref_required_security_code);
     }
 
     public NanoHTTPD.Response isUserAuthorized() {
@@ -125,5 +129,46 @@ public class AuthorizationController {
             saveLoginInfoResponseMsg.put("error", "Some errors occured. Cannot save login info!");
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(saveLoginInfoResponseMsg));
         }
+    }
+
+    public NanoHTTPD.Response isRequiredLoginSecurityCode() {
+        Map<String, Boolean> isRequiredInstagramLoginMsg = new HashMap<>();
+        isRequiredInstagramLoginMsg.put("isRequiredSecurityCode", sharedPreferences.getBoolean(requiredSecurityCodePrefKey, false));
+
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(isRequiredInstagramLoginMsg));
+    }
+
+    public NanoHTTPD.Response submitSecurityCode(String requestBodyData, String lastRequestedUri) {
+        try {
+            SecurityCode securityCode = gson.fromJson(requestBodyData, SecurityCode.class);
+
+            SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+            prefEditor.putBoolean(requiredSecurityCodePrefKey, false);
+            prefEditor.apply();
+
+            if (lastRequestedUri == null) {
+                lastRequestedUri = "/";
+            }
+
+            Intent intent = new Intent(Constants.SUBMIT_SECURITY_CODE_ACTION);
+            intent.putExtra("securityCode", securityCode.getSecurityCode());
+            context.sendBroadcast(intent);
+
+            Map<String, String> saveLoginSecurityCodeResponseMsg = new HashMap<>();
+            saveLoginSecurityCodeResponseMsg.put("success", "Login security code has been submitted!");
+            saveLoginSecurityCodeResponseMsg.put("lastRequestUri", lastRequestedUri);
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(saveLoginSecurityCodeResponseMsg));
+        } catch (Exception e) {
+            Map<String, String> saveLoginSecurityCodeResponseMsg = new HashMap<>();
+            saveLoginSecurityCodeResponseMsg.put("error", "Some errors occured. Cannot submit security code!");
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", gson.toJson(saveLoginSecurityCodeResponseMsg));
+        }
+    }
+
+    public NanoHTTPD.Response getNewSecurityCode() {
+        Intent intent = new Intent(Constants.REQUEST_GET_NEW_SECURITY_CODE_ACTION);
+        context.sendBroadcast(intent);
+
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", "");
     }
 }

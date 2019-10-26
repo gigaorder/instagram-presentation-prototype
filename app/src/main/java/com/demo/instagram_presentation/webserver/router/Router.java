@@ -103,6 +103,22 @@ public class Router {
                     response = authorizationController.saveInstagramLoginInfo(getRequestBodyDataAsJson(session), lastRequestedUri);
                 }
                 break;
+            case "/api/v1/is-required-security-code":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = authorizationController.isRequiredLoginSecurityCode();
+                }
+                break;
+
+            case "/api/v1/submit-security-code":
+                if (NanoHTTPD.Method.POST.equals(requestMethod)) {
+                    response = authorizationController.submitSecurityCode(getRequestBodyDataAsJson(session), lastRequestedUri);
+                }
+                break;
+            case "/api/v1/get-new-code":
+                if (NanoHTTPD.Method.GET.equals(requestMethod)) {
+                    response = authorizationController.getNewSecurityCode();
+                }
+                break;
             case "/api/v1/license":
                 if (NanoHTTPD.Method.GET.equals(requestMethod)) {
                     response = licenseController.getLicenseId();

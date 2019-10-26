@@ -47,6 +47,14 @@ public class InstagramWebScraper {
         instagramPostsGetter.getHtmlContent(html -> htmlExtractionListener.onHtmlExtracted(html), delay);
     }
 
+    public void submitSecurityCode(String code) {
+        instagramLogin.executeSubmitSecurityCodeWithJSCode(code);
+    }
+
+    public void getNewSecurityCode() {
+        instagramLogin.getNewSecurityCode();
+    }
+
     public interface InstagramLoginListener {
         void onFinish(boolean success, int loginCode, String loginErrorMessage);
     }

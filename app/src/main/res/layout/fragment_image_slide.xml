@@ -121,28 +121,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fragment_present_txtNumberOfComments" />
 
-    <TextView
-        android:id="@+id/fragment_present_txtServerInfo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="@color/colorPrimary"
-        android:textSize="40sp"
-        app:layout_constraintBottom_toTopOf="@id/fragment_present_txtTimer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/fragment_present_txtTimer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="@color/colorAccent"
-        android:textSize="30sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/fragment_present_layout_user_section"
         android:layout_width="match_parent"
@@ -179,7 +157,7 @@
         android:id="@+id/fragment_present_webView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="invisible" />
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/fragment_present_txtLoginError"
@@ -196,13 +174,26 @@
         android:textColor="@color/colorAccent"
         android:visibility="gone"/>
 
-    <Button
-        android:id="@+id/fragment_present_btnLoadUrl"
+    <TextView
+        android:id="@+id/fragment_present_txtServerInfo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Refresh"
-        android:textSize="14pt"
+        android:gravity="center"
+        android:textColor="@color/colorPrimary"
+        android:textSize="40sp"
+        app:layout_constraintBottom_toTopOf="@id/fragment_present_txtTimer"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:visibility="gone"/>
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/fragment_present_txtTimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/colorAccent"
+        android:textSize="30sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
