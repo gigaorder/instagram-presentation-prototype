@@ -729,10 +729,10 @@ public class ImageSlideFragment extends Fragment {
             webView.setVisibility(View.VISIBLE);
             txtLoginError.setVisibility(View.VISIBLE);
 
+            setServerInfo("authorize");
             if (txtServerInfo.getVisibility() == View.GONE) {
                 txtServerInfo.setVisibility(View.VISIBLE);
                 txtTimer.setVisibility(View.VISIBLE);
-                setServerInfo("authorize");
                 startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
             }
 

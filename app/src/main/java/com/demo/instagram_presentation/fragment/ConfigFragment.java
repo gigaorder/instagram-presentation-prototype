@@ -154,7 +154,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                         MainActivity.self.registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
 
                         if (NetworkUtil.isWifiConnected()) {
-                            setServerInfoOnWifi();
+                            setServerInfoOnWifi("");
                             setErrorMsg();
                         } else {
                             wifiConnected = false;
@@ -194,10 +194,13 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         if (!configServerStarted) {
             txtError.setText(configServerCantStartMsg);
         } else if (instagramSourceUrl == null && instagramSourceTags == null) {
+            setServerInfoOnWifi("");
             txtError.setText(errorSourceUrlNotSet);
         } else if (isRequiredLogin) {
+            setServerInfoOnWifi("authorize");
             txtError.setText(sharedPreferences.getString(loginErrorPrefKey, "Login error"));
         } else if (!AppPreferencesUtil.isInternetAvailable()) {
+            setServerInfoOnWifi("wifi");
             txtError.setText("Internet is not available.\nPlease change wifi connection.");
         }
     }
@@ -207,7 +210,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         txtTimer.setVisibility(View.GONE);
     }
 
-    private void setServerInfoOnWifi() {
+    private void setServerInfoOnWifi(String route) {
         WifiInfo info = wifiManager.getConnectionInfo();
         int ipAddress = info.getIpAddress();
         String ssid = info.getSSID();
@@ -217,14 +220,14 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
         String serverStatus = "Status: Online | ";
         String wifiSsid = String.format("Connected WiFi SSID: %s\n", ssid);
-        String configServerIp = String.format("Config server: %s:%d", formatedIpAddress, Constants.WEB_SERVER_PORT);
+        String configServerIp = String.format("Config server: %s:%d/%s", formatedIpAddress, Constants.WEB_SERVER_PORT, route);
         int prevLength = serverStatus.length() + wifiSsid.length();
 
         Spannable serverInfo = new SpannableString(serverStatus + wifiSsid + configServerIp);
 
         serverInfo.setSpan(new ForegroundColorSpan(Color.GREEN), 8, 14, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE); // "online" is green
         serverInfo.setSpan(new StyleSpan(Typeface.BOLD), serverStatus.length() + 21, serverStatus.length() + 21 + ssid.length() + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // SSID is bold
-        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLength + 15, prevLength + 15 + formatedIpAddress.length() + 1 + String.valueOf(Constants.WEB_SERVER_PORT).length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
+        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLength + 15, prevLength + 15 + formatedIpAddress.length() + 1 + String.valueOf(Constants.WEB_SERVER_PORT).length() + 1 + route.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
 
         txtServerInfo.setText(serverInfo);
 
@@ -322,7 +325,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
                 FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.self);
             } else {
-                setServerInfoOnWifi();
                 setErrorMsg();
             }
         }, 10000);
