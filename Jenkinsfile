@@ -13,6 +13,12 @@ pipeline {
     }
 
     stages {
+        stage('Download original apk files') {
+            steps {
+                sh "./download-original-apks.sh"
+            }
+        }
+
         stage('Prepare config files') {
             steps {
                 sh "cp /var/jenkins_home/files/feed2wall/google-services.json ./app/google-services.json"
@@ -29,12 +35,6 @@ pipeline {
         stage('Create patch files for all available versions') {
             steps {
                 sh "./script/create-patch-files.sh"
-            }
-        }
-
-        stage('Store original APK file (if it does not exist)') {
-            steps {
-                sh "./script/save-apk.sh"
             }
         }
 
