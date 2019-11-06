@@ -20,6 +20,12 @@ pipeline {
             }
         }
 
+        stage('Download original apk files') {
+            steps {
+                sh "./script/download-original-apks.sh"
+            }
+        }
+
         stage('Build APK') {
             steps {
                 sh "./gradlew clean assembleDebug"
@@ -32,15 +38,15 @@ pipeline {
             }
         }
 
-        stage('Store original APK file (if it does not exist)') {
-            steps {
-                sh "./script/save-apk.sh"
-            }
-        }
-
         stage('Notify update') {
             steps {
                 sh "./notifyUpdate instagramPatching"
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh "rm ./app/google-services.json && rm ./ssh.cfg"
             }
         }
     }
