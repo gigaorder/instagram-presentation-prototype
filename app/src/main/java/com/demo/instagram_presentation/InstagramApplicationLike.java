@@ -9,9 +9,12 @@ import android.os.Build;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.hotfix_plugin.TinkerManager;
 import com.demo.instagram_presentation.util.Constants;
+import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 import com.tencent.tinker.anno.DefaultLifeCycle;
 import com.tencent.tinker.entry.DefaultApplicationLike;
 import com.tencent.tinker.loader.shareutil.ShareConstants;
+
+import java.io.IOException;
 
 @DefaultLifeCycle(application = "com.demo.instagram_presentation.InstagramApplication",
         flags = ShareConstants.TINKER_ENABLE_ALL,
@@ -29,6 +32,21 @@ public class InstagramApplicationLike extends DefaultApplicationLike {
         Bugfender.enableCrashReporting();
         Bugfender.enableUIEventLogging(getApplication());
         Bugfender.enableLogcatLogging();
+
+        // init webserver
+        NanoHttpdWebServer webServerInstance = new NanoHttpdWebServer.Builder(getApplication(), Constants.WEB_SERVER_PORT).build();
+        NanoHttpdWebServer.setSingletonInstace(webServerInstance);
+        try {
+            NanoHttpdWebServer.getInstance().start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onTerminate() {
+        NanoHttpdWebServer.getInstance().stop();
+        super.onTerminate();
     }
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)

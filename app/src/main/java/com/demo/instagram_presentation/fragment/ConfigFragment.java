@@ -1,6 +1,5 @@
 package com.demo.instagram_presentation.fragment;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -33,9 +32,8 @@ import com.demo.instagram_presentation.listener.WifiConnectListener;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
-import com.demo.instagram_presentation.util.FragmentUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
-import com.squareup.picasso.Picasso;
+import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 
 import java.util.Locale;
 
@@ -94,7 +92,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private WifiP2pManager.Channel wifiP2pChannel;
     private WifiManager wifiManager;
     private WifiConnectReceiver wifiConnectReceiver;
-    private boolean configServerStarted;
     private boolean wifiConnected;
     private ConfigFragment thisFragment;
     private String instagramSourceUrl;
@@ -106,10 +103,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     public ConfigFragment() {
     }
 
-    public ConfigFragment(boolean configServerStarted) {
-        this.configServerStarted = configServerStarted;
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -119,9 +112,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         thisFragment = this;
 
         // Load background images
-        Picasso.get().load(R.drawable.fallback_screen_bg_16_9).centerCrop().fit().noFade().into(imgBackground);
-        Picasso.get().load(R.drawable.feed2wall_logo_white).centerCrop().fit().noFade().into(imgLogoText);
-        Picasso.get().load(R.drawable.rockiton).centerCrop().fit().noFade().into(imgLogo);
+//        Picasso.get().load(R.drawable.fallback_screen_bg_16_9).centerCrop().fit().noFade().into(imgBackground);
+//        Picasso.get().load(R.drawable.feed2wall_logo_white).centerCrop().fit().noFade().into(imgLogoText);
+//        Picasso.get().load(R.drawable.rockiton).centerCrop().fit().noFade().into(imgLogo);
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         wifiManager = (WifiManager) MainActivity.self.getApplicationContext().getSystemService(WIFI_SERVICE);
@@ -146,9 +139,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             public void onFinish() {
                 if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
                     // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
-                    FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.self);
+                    MainActivity.self.sendBroadcast(new Intent(Constants.SHOW_IMAGE_SLIDE_ACTION));
                 } else {
-                    if (configServerStarted) {
+                    if (NanoHttpdWebServer.getInstance().isAlive()) {
                         wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
                         IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
                         MainActivity.self.registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
@@ -191,7 +184,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
     private void setErrorMsg() {
         txtError.setVisibility(View.VISIBLE);
-        if (!configServerStarted) {
+        if (!NanoHttpdWebServer.getInstance().isAlive()) {
             txtError.setText(configServerCantStartMsg);
         } else if (instagramSourceUrl == null && instagramSourceTags == null) {
             setServerInfoOnWifi("");
@@ -323,7 +316,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             }
 
             if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
-                FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.self);
+                MainActivity.self.sendBroadcast(new Intent(Constants.SHOW_IMAGE_SLIDE_ACTION));
             } else {
                 setErrorMsg();
             }

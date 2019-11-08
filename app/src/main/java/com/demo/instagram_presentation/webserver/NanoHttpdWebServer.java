@@ -12,7 +12,8 @@ import fi.iki.elonen.NanoHTTPD;
  */
 public class NanoHttpdWebServer extends NanoHTTPD {
     private Router router;
-    public static CookieHandler cookieHandler;
+    private CookieHandler cookieHandler;
+    private static NanoHttpdWebServer instance;
 
     public NanoHttpdWebServer(Context context, int port) {
         super(port);
@@ -23,5 +24,30 @@ public class NanoHttpdWebServer extends NanoHTTPD {
     public Response serve(IHTTPSession session) {
         cookieHandler = new CookieHandler(session.getHeaders());
         return router.routeRequest(session);
+    }
+
+    public CookieHandler getCookieHandler() {
+        return cookieHandler;
+    }
+
+    public static void setSingletonInstace(NanoHttpdWebServer nanoHttpdWebServer) {
+        instance = nanoHttpdWebServer;
+    }
+
+    public static NanoHttpdWebServer getInstance() {
+        return instance;
+    }
+
+    public static class Builder {
+        private Context context;
+        private int port;
+        public Builder(Context context, int port) {
+            this.context = context;
+            this.port = port;
+        }
+
+        public NanoHttpdWebServer build() {
+            return new NanoHttpdWebServer(context, port);
+        }
     }
 }

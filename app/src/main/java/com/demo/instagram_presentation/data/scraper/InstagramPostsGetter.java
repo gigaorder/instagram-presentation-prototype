@@ -1,10 +1,19 @@
 package com.demo.instagram_presentation.data.scraper;
 
+import android.os.AsyncTask;
 import android.os.Handler;
+import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import com.android.volley.toolbox.StringRequest;
+import com.demo.instagram_presentation.model.InstagramPost;
+import com.demo.instagram_presentation.model.InstagramPostElement;
+import com.demo.instagram_presentation.util.InstagramUtil;
+
 import org.apache.commons.text.StringEscapeUtils;
+
+import java.util.ArrayList;
 
 public class InstagramPostsGetter {
     private WebView webView;
@@ -35,22 +44,33 @@ public class InstagramPostsGetter {
     public void getHtmlContent(GetPostsListener getPostsListener, int delay) {
 
         new Handler().postDelayed(() -> {
-                    String scrollToBottomAndGetBodyContent = "(function() {window.scrollTo(0,document.body.scrollHeight);return document.getElementsByTagName('body')[0].innerHTML;})();";
+                    String scrollToBottomAndGetBodyContent = "(function() {\n" +
+                            "    window.scrollTo(0,document.body.scrollHeight);\n" +
+                            "    var posts = Array.from(document.getElementsByTagName('body')[0].querySelectorAll('article a'));\n" +
+                            "    var result = [];\n" +
+                            "    for (var i = 0; i < posts.length; i++) {\n" +
+                            "       result.push(posts[i].getAttribute('href'));\n" +
+                            "    }\n" +
+                            "    return result.toString();\n" +
+                            "})();";
                     webView.evaluateJavascript(
                             scrollToBottomAndGetBodyContent,
-                            html -> {
-                                html = StringEscapeUtils.unescapeJava(html);
-                                getPostsListener.onFinish(html);
+                            urls -> {
+                                urls = StringEscapeUtils.unescapeJava(urls);
+                                urls = urls.replaceAll("\"", "");
+                                if (urls.isEmpty()) return;
+                                String[] listUrl = urls.split(",");
+                                getPostsListener.onFinish(listUrl);
                             });
                 }
                 , delay);
     }
 
-    public interface FetchPageListener {
+    protected interface FetchPageListener {
         void onFinish(boolean redirected, boolean startGettingPost);
     }
 
-    public interface GetPostsListener {
-        void onFinish(String html);
+    protected interface GetPostsListener {
+        void onFinish(String[] listUrl);
     }
 }

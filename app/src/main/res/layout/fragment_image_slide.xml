@@ -20,15 +20,6 @@
         app:layout_constraintTop_toTopOf="@id/fragment_present_layout_user_section" />
 
     <ImageView
-        android:id="@+id/fragment_present_imgWatermark"
-        android:layout_width="400dp"
-        android:layout_height="140dp"
-        android:layout_marginEnd="20dp"
-        android:src="@drawable/demo_rockiton_watermark"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <ImageView
         android:id="@+id/fragment_present_imgMain"
         android:layout_width="match_parent"
         android:layout_height="400dp"
@@ -170,30 +161,41 @@
         android:textAlignment="center"
         android:background="#FFF"
         android:padding="10dp"
-        android:textSize="14pt"
+        android:textSize="@dimen/_14ssp"
         android:textColor="@color/colorAccent"
         android:visibility="gone"/>
 
     <TextView
         android:id="@+id/fragment_present_txtServerInfo"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:textColor="@color/colorPrimary"
-        android:textSize="40sp"
+        android:textSize="@dimen/_15ssp"
+        android:background="#ffffff"
         app:layout_constraintBottom_toTopOf="@id/fragment_present_txtTimer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/fragment_present_txtTimer"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:textColor="@color/colorAccent"
-        android:textSize="30sp"
+        android:textSize="@dimen/_15ssp"
+        android:background="#ffffff"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/fragment_present_imgWatermark"
+        android:layout_width="400dp"
+        android:layout_height="140dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/demo_rockiton_watermark"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

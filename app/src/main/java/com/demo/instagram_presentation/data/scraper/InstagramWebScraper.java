@@ -24,6 +24,7 @@ public class InstagramWebScraper {
 
     @SuppressLint("SetJavaScriptEnabled")
     public void configWebView() {
+        webView.getSettings().setLoadsImagesAutomatically(false);
         webView.getSettings().setJavaScriptEnabled(true);
     }
 
@@ -38,13 +39,13 @@ public class InstagramWebScraper {
                     }
                 });
             } else if (startGettingPost) {
-                instagramPostsGetter.getHtmlContent(html -> htmlExtractionListener.onHtmlExtracted(html), 0);
+                instagramPostsGetter.getHtmlContent(listUrl -> htmlExtractionListener.onHtmlExtracted(listUrl), 0);
             }
         });
     }
 
     public void continueGettingPosts(int delay) {
-        instagramPostsGetter.getHtmlContent(html -> htmlExtractionListener.onHtmlExtracted(html), delay);
+        instagramPostsGetter.getHtmlContent(listUrl -> htmlExtractionListener.onHtmlExtracted(listUrl), delay);
     }
 
     public void submitSecurityCode(String code) {
@@ -60,6 +61,6 @@ public class InstagramWebScraper {
     }
 
     public interface HtmlExtractionListener {
-        void onHtmlExtracted(String html);
+        void onHtmlExtracted(String[] listUrl);
     }
 }

@@ -16,13 +16,20 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/main_activity_txtNetworkStatus"
-        android:layout_width="wrap_content"
+        android:id="@+id/main_activity_app_message"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="40sp"
+        android:textSize="@dimen/_14ssp"
+        android:textColor="@color/colorPrimary"
+        android:background="#fff"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:visibility="invisible"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

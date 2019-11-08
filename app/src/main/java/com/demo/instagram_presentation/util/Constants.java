@@ -28,6 +28,8 @@ public class Constants {
     public static final String NO_INTERNET_ACTION = "NO_INTERNET";
     public static final String SUBMIT_SECURITY_CODE_ACTION = "SEND_SECURITY_CODE";
     public static final String REQUEST_GET_NEW_SECURITY_CODE_ACTION = "GET_NEW_SECURITY_CODE";
+    public static final String DISPLAY_APP_MESSAGE_ACTION = "DISPLAY_APP_MESSAGE";
+    public static final String SHOW_IMAGE_SLIDE_ACTION = "SHOW_IMAGE_SLIDE";
 
     //License key constants
     public static final int BASE_KEY_SEED_MINIMUM_VALUE = 100;

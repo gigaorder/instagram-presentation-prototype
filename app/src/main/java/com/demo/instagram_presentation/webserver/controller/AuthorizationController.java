@@ -48,7 +48,7 @@ public class AuthorizationController {
     }
 
     public NanoHTTPD.Response isUserAuthorized() {
-        CookieHandler cookieHandler = NanoHttpdWebServer.cookieHandler;
+        CookieHandler cookieHandler = NanoHttpdWebServer.getInstance().getCookieHandler();
         String password = cookieHandler.read("authorization-key");
         boolean isAuthorized = false;
 
@@ -76,7 +76,7 @@ public class AuthorizationController {
         AuthorizationInfo authorizationInfo = gson.fromJson(requestBodyData, AuthorizationInfo.class);
         String authorizationKey = authorizationInfo.getAuthorizationKey();
         NanoHTTPD.Response response;
-        CookieHandler cookieHandler = NanoHttpdWebServer.cookieHandler;
+        CookieHandler cookieHandler = NanoHttpdWebServer.getInstance().getCookieHandler();
 
         if (lastRequestedUri == null) {
             lastRequestedUri = "/";

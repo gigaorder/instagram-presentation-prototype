@@ -15,13 +15,12 @@ import lombok.Data;
  */
 @Data
 public class InstagramPostElement {
-    private Element element;
     private String href;
     private boolean requested;
 
-    public InstagramPostElement(Element element) {
-        this.element = element;
-        href = element.attr("href");
+    public InstagramPostElement(String href) {
+        this.href = href;
+        this.requested = false;
     }
 
     @Override

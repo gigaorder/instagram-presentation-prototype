@@ -4,30 +4,26 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.provider.Settings.Secure;
+import android.widget.TextView;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.hotfix_plugin.Constant;
-import com.demo.instagram_presentation.hotfix_plugin.PatchingUtil;
-import com.demo.instagram_presentation.util.FragmentUtil;
+import com.demo.instagram_presentation.fragment.ConfigFragment;
+import com.demo.instagram_presentation.fragment.ImageSlideFragment;
 import com.demo.instagram_presentation.util.PermissionUtil;
 import com.demo.instagram_presentation.service.RestartAppService;
 import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
-import com.demo.instagram_presentation.fragment.ConfigFragment;
-import com.demo.instagram_presentation.fragment.ImageSlideFragment;
 import com.demo.instagram_presentation.util.AppExceptionHandler;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
@@ -36,108 +32,166 @@ import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
 import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.squareup.picasso.LruCache;
+import com.squareup.picasso.Picasso;
 
 import java.io.IOException;
 
 import butterknife.BindString;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
     @BindString(R.string.login_error_intent_key)
     String loginErrorMsgIntentKey;
+    @BindView(R.id.main_activity_app_message)
+    TextView appMessage;
 
-    private NanoHttpdWebServer webServer;
-    private boolean configServerStarted;
-    private WifiScanResultReceiver wifiScanResultReceiver;
-    private Intent restartServiceIntent;
     public static MainActivity self;
     public static final String DEVICE_ID = Secure.getString(InstagramApplicationContext.context.getContentResolver(), Secure.ANDROID_ID);
+
+    private LruCache picassoCache;
+    private Picasso picassoInstance;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         self = this;
-        boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
 
+        LicenseUtil.initKeyIdFile();
         AppPreferencesUtil.initSharedPreference(getApplicationContext());
-        NetworkUtil.initNetworkService();
-
-        restartServiceIntent = new Intent(this, RestartAppService.class);
-        startService(restartServiceIntent);
         Thread.setDefaultUncaughtExceptionHandler(new AppExceptionHandler(this));
 
-        if (!LicenseUtil.isKeyIdFileInitialized()) {
-            LicenseUtil.initKeyIdFile();
-        }
+        setUpServices();
+        setUpUI();
+    }
 
+    private void setUpUI() {
         setFullScreen();
 
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        PermissionUtil.askForRequiredPermissions();
+
+//        picassoCache = new LruCache(this);
+//        picassoInstance = new Picasso.Builder(this).memoryCache(picassoCache).build();
+//        Picasso.setSingletonInstance(picassoInstance);
+
+        boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
+        if (!deviceBoot && AppPreferencesUtil.isAbleToDisplaySlideshow()) {
+            showFragment(new ImageSlideFragment());
+        } else {
+            showFragment(new ConfigFragment());
+        }
+    }
+
+    private void setFullScreen() {
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.hide();
+        }
+        getWindow().getDecorView().setSystemUiVisibility
+                ( View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY );
+    }
+
+    private void showFragment(Fragment newFragment) {
+        getSupportFragmentManager().beginTransaction()
+            .add(R.id.main_activity_fragment_container, newFragment)
+            .commit();
+    }
+
+    private Intent restartServiceIntent;
+    private void setUpServices() {
+        NetworkUtil.initNetworkService();
+
+        restartServiceIntent = new Intent(this, RestartAppService.class);
+        startService(restartServiceIntent);
+
+        initBroadcastReceivers();
+
+        FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
+    }
+
+    private WifiScanResultReceiver wifiScanResultReceiver;
+    private BroadcastReceiver showImageSlideReceiver;
+    private BroadcastReceiver showConfigScreenReceiver;
+    private BroadcastReceiver displayAppMessageReceiver;
+
+    private void initBroadcastReceivers() {
+        showImageSlideReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+//                picassoCache.clear();
+//                picassoInstance.cancelTag("profileImg");
+//                picassoInstance.cancelTag("mainImg");
+//                showFragment(new ImageSlideFragment(picassoInstance));
+                Intent restartIntent = new Intent(MainActivity.this, MainActivity.class);
+                restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(restartIntent);
+            }
+        };
+
+        showConfigScreenReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                showFragment(new ConfigFragment());
+            }
+        };
+
+        displayAppMessageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String message = intent.getStringExtra("message");
+                appMessage.setVisibility(View.VISIBLE);
+                appMessage.setText(message);
+            }
+        };
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         // Register Broadcast receivers
         IntentFilter ifPrefChanged = new IntentFilter(Constants.PREFERENCE_CHANGED_ACTION);
-        registerReceiver(appPreferenceChangedReceiver, ifPrefChanged);
+        registerReceiver(showImageSlideReceiver, ifPrefChanged);
         IntentFilter ifLoginInfoChanged = new IntentFilter(Constants.LOGIN_INFO_CHANGED_ACTION);
-        registerReceiver(appPreferenceChangedReceiver, ifLoginInfoChanged);
+        registerReceiver(showImageSlideReceiver, ifLoginInfoChanged);
+        IntentFilter ifShowImageSlide = new IntentFilter(Constants.SHOW_IMAGE_SLIDE_ACTION);
+        registerReceiver(showImageSlideReceiver, ifShowImageSlide);
 
         IntentFilter ifLoginFailed = new IntentFilter(Constants.LOGIN_FAILED_ACTION);
-        registerReceiver(loginFailedReceiver, ifLoginFailed);
+        registerReceiver(showConfigScreenReceiver, ifLoginFailed);
 
         wifiScanResultReceiver = new WifiScanResultReceiver();
         IntentFilter ifWifiScanResult = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         registerReceiver(wifiScanResultReceiver, ifWifiScanResult);
 
         IntentFilter ifNoInternet = new IntentFilter(Constants.NO_INTERNET_ACTION);
-        registerReceiver(noInternetReceiver, ifNoInternet);
+        registerReceiver(showConfigScreenReceiver, ifNoInternet);
 
-        startConfigServer();
-
-        if (!deviceBoot && AppPreferencesUtil.isAbleToDisplaySlideshow()) {
-            FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, this);
-        } else {
-            FragmentUtil.showConfigFragment(R.id.main_activity_fragment_container, this, configServerStarted);
-        }
-
-        PermissionUtil.askForRequiredPermissions();
-        hotfixPluginSetup();
+        IntentFilter ifDisplayAppMessage = new IntentFilter(Constants.DISPLAY_APP_MESSAGE_ACTION);
+        registerReceiver(displayAppMessageReceiver, ifDisplayAppMessage);
     }
 
-    private void startConfigServer() {
-        try {
-            webServer = new NanoHttpdWebServer(getApplicationContext(), Constants.WEB_SERVER_PORT);
-            webServer.start();
-            configServerStarted = true;
-        } catch (IOException e) {
-            configServerStarted = false;
-            e.printStackTrace();
-        }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        BroadcastReceiverUtil.unregisterReceiver(this, showImageSlideReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, showConfigScreenReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(this, displayAppMessageReceiver);
     }
-
-    private void hotfixPluginSetup() {
-        FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
-    }
-
-    private BroadcastReceiver appPreferenceChangedReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            FragmentUtil.showImageSlideFragment(R.id.main_activity_fragment_container, MainActivity.this);
-        }
-    };
-
-    private BroadcastReceiver loginFailedReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            FragmentUtil.showConfigFragment(R.id.main_activity_fragment_container, MainActivity.this, configServerStarted);
-        }
-    };
-
-    private BroadcastReceiver noInternetReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            FragmentUtil.showConfigFragment(R.id.main_activity_fragment_container, MainActivity.this, configServerStarted);
-        }
-    };
 
     @Override
     public void onBackPressed() {
@@ -155,25 +209,5 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         stopService(restartServiceIntent);
-        BroadcastReceiverUtil.unregisterReceiver(this, appPreferenceChangedReceiver);
-        BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
-        BroadcastReceiverUtil.unregisterReceiver(this, loginFailedReceiver);
-        BroadcastReceiverUtil.unregisterReceiver(this, noInternetReceiver);
-        webServer.stop();
-    }
-
-    private void setFullScreen() {
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.hide();
-        getWindow().getDecorView().setSystemUiVisibility
-                ( View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY );
     }
 }

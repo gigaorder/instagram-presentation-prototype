@@ -15,7 +15,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -29,7 +28,6 @@ import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
-import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.R;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.data.scraper.InstagramLogin;
@@ -45,11 +43,10 @@ import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
 import com.google.gson.JsonParser;
+import com.squareup.picasso.LruCache;
+import com.squareup.picasso.MemoryPolicy;
+import com.squareup.picasso.NetworkPolicy;
 import com.squareup.picasso.Picasso;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -195,7 +192,7 @@ public class ImageSlideFragment extends Fragment {
     private boolean isProfilePicDisplayed;
     private boolean isUsernameDisplayed;
     private InstagramWebScraper instagramWebScraper;
-    private Set<InstagramPostElement> postElementSet;
+    private Set<InstagramPostElement> instagramUrlsSet;
     private Set<InstagramPost> instagramPostsSet;
     private List<InstagramPost> instagramPosts;
     private List<InstagramPost> newInstagramPosts;
@@ -256,7 +253,19 @@ public class ImageSlideFragment extends Fragment {
         View fragmentRootView = inflater.inflate(R.layout.fragment_image_slide, container, false);
         ButterKnife.bind(this, fragmentRootView);
 
-        webView.getSettings().setLoadsImagesAutomatically(false);
+        configViewComponents();
+
+        if (initWebScrapper()) {
+            startFetchingPosts();
+        } else {
+            txtError.setVisibility(View.VISIBLE);
+            txtError.setText(errorSourceUrlNotSet);
+        }
+
+        return fragmentRootView;
+    }
+
+    private void configViewComponents() {
         setServerInfo("");
         startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
         getPreferences();
@@ -266,12 +275,12 @@ public class ImageSlideFragment extends Fragment {
         // Hide components, show them after the images are loaded
         hideComponents();
         startNetworkStrengthScan(Constants.NETWORK_SIGNAL_SCAN_INTERVAL);
+    }
 
+    private boolean initWebScrapper() {
         // If both source URL and source hashtags are empty -> request user to go to settings screen to setup first
         if (instagramSourceUrl.trim().isEmpty() && instagramSourceTags.trim().isEmpty()) {
-            txtError.setVisibility(View.VISIBLE);
-            txtError.setText(errorSourceUrlNotSet);
-            return fragmentRootView;
+            return false;
         }
         // Source URL is not empty -> fetch by URL, filter hashtags
         else if (!instagramSourceUrl.trim().isEmpty()) {
@@ -288,9 +297,7 @@ public class ImageSlideFragment extends Fragment {
         instagramWebScraper = new InstagramWebScraper(webView, instagramUsername, instagramPassword, sourceUrl);
         instagramWebScraper.configWebView();
         instagramWebScraper.setInstagramLoginListener(loginListener);
-        startFetchingPosts();
-
-        return fragmentRootView;
+        return true;
     }
 
     private void startFetchingPosts() {
@@ -378,7 +385,7 @@ public class ImageSlideFragment extends Fragment {
     }
 
     private void initScraperVariables() {
-        postElementSet = new LinkedHashSet<>();
+        instagramUrlsSet = new LinkedHashSet<>();
         maxNumberOfPostsReached = false;
         scrollCount = 0;
         lastNumberOfPosts = 0;
@@ -407,8 +414,9 @@ public class ImageSlideFragment extends Fragment {
         }
 
         instagramPosts.add(instagramPost);
-        Picasso.get().load(instagramPost.getImgUrl()).fetch();
-        Picasso.get().load(instagramPost.getUserProfilePicUrl()).fetch();
+
+        Picasso.get().load(instagramPost.getImgUrl()).tag("mainImg").fetch();
+        Picasso.get().load(instagramPost.getUserProfilePicUrl()).tag("profileImg").fetch();
 
         if (!maxNumberOfPostsReached) {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
@@ -419,6 +427,8 @@ public class ImageSlideFragment extends Fragment {
                 webView.loadUrl("about:blank");
                 maxNumberOfPostsReached = true;
                 Bugfender.d(bugfenderTag, "Finished fetching posts");
+                instagramUrlsSet.clear();
+                instagramPostsSet.clear();
                 logMemory();
             }
         }
@@ -461,8 +471,8 @@ public class ImageSlideFragment extends Fragment {
 
 //                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
-                Picasso.get()
-                        .load(post.getImgUrl())
+                Picasso.get().load(post.getImgUrl())
+                        .tag("mainImg")
                         .fit()
                         .centerCrop()
                         .into(imgMain);
@@ -484,8 +494,10 @@ public class ImageSlideFragment extends Fragment {
 
                 if (!post.getUserProfilePicUrl().equals(lastUserProfilePicUrl)) {
                     lastUserProfilePicUrl = post.getUserProfilePicUrl();
-                    Picasso.get()
-                            .load(lastUserProfilePicUrl)
+                    Picasso.get().load(lastUserProfilePicUrl)
+                            .tag("profileImg")
+                            .networkPolicy(NetworkPolicy.NO_CACHE)
+                            .memoryPolicy(MemoryPolicy.NO_CACHE)
                             .fit()
                             .centerCrop()
                             .into(imgProfile);
@@ -701,12 +713,6 @@ public class ImageSlideFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-        handler.removeCallbacks(imagePresentationLoader);
-    }
-
     BroadcastReceiver submitSecurityCodeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -724,6 +730,21 @@ public class ImageSlideFragment extends Fragment {
     };
     IntentFilter getNewSecurityCodeAction = new IntentFilter(Constants.REQUEST_GET_NEW_SECURITY_CODE_ACTION);
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        MainActivity.self.registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
+        MainActivity.self.registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        handler.removeCallbacks(imagePresentationLoader);
+        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
+    }
+
     private void toggleDisplayingWebview(boolean isDisplayed) {
         if (isDisplayed) {
             webView.setVisibility(View.VISIBLE);
@@ -735,15 +756,9 @@ public class ImageSlideFragment extends Fragment {
                 txtTimer.setVisibility(View.VISIBLE);
                 startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
             }
-
-            MainActivity.self.registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
-            MainActivity.self.registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
         } else {
             webView.setVisibility(View.INVISIBLE);
             txtLoginError.setVisibility(View.GONE);
-
-            BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
-            BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
         }
     }
 
@@ -774,7 +789,7 @@ public class ImageSlideFragment extends Fragment {
         }
     };
 
-    private InstagramWebScraper.HtmlExtractionListener initialHtmlListener = html -> {
+    private InstagramWebScraper.HtmlExtractionListener initialHtmlListener = listUrl -> {
         SharedPreferences.Editor prefEditor = sharedPreferences.edit();
         prefEditor.putBoolean(requiredLoginPrefKey, false);
         prefEditor.apply();
@@ -786,18 +801,16 @@ public class ImageSlideFragment extends Fragment {
             return;
         }
 
-        Elements elements = Jsoup.parse(html).select("article a");
-        // Use a Set of Element to avoid duplication
-        for (Element element : elements) {
-            postElementSet.add(new InstagramPostElement(element));
+        for (String url : listUrl) {
+            instagramUrlsSet.add(new InstagramPostElement(url));
         }
 
-        int currentNumberOfPosts = postElementSet.size();
+        int currentNumberOfPosts = instagramUrlsSet.size();
         // If there are new posts, process the HTML document
         if (currentNumberOfPosts > lastNumberOfPosts) {
             scrollCount = 0;
             int postIndex = 0;
-            for (InstagramPostElement postElement : postElementSet) {
+            for (InstagramPostElement postElement : instagramUrlsSet) {
                 final int index = postIndex++;
 
                 if (checkInfiniteSroll(index)) {
@@ -806,7 +819,7 @@ public class ImageSlideFragment extends Fragment {
                 }
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
-                    String postHref = postElement.getElement().attr("href");
+                    String postHref = postElement.getHref();
 
                     requestQueue.add(new StringRequest("https://instagram.com" + postHref,
                         // Success listener
@@ -830,7 +843,7 @@ public class ImageSlideFragment extends Fragment {
             scrollCount++;
         }
 
-        lastNumberOfPosts = postElementSet.size();
+        lastNumberOfPosts = instagramUrlsSet.size();
         if (currentNumberOfPosts == 0) {
             // Wait for the page to be fully loaded the first time -> less delay
             instagramWebScraper.continueGettingPosts(Constants.FIRST_SCROLL_DELAY);
@@ -840,12 +853,14 @@ public class ImageSlideFragment extends Fragment {
         }
     };
 
-    private InstagramWebScraper.HtmlExtractionListener refreshHtmlListener = html -> {
+    private InstagramWebScraper.HtmlExtractionListener refreshHtmlListener = listUrl -> {
         SharedPreferences.Editor prefEditor = sharedPreferences.edit();
         prefEditor.putBoolean(requiredLoginPrefKey, false);
         prefEditor.apply();
         if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
             Bugfender.d(bugfenderTag, "Finished fetching posts");
+            instagramUrlsSet.clear();
+            instagramPostsSet.clear();
             logMemory();
             webView.loadUrl("about:blank");
 
@@ -858,18 +873,16 @@ public class ImageSlideFragment extends Fragment {
             return;
         }
 
-        Elements elements = Jsoup.parse(html).select("article a");
-        // Use a Set of Element to avoid duplication
-        for (Element element : elements) {
-            postElementSet.add(new InstagramPostElement(element));
+        for (String url : listUrl) {
+            instagramUrlsSet.add(new InstagramPostElement(url));
         }
 
-        int currentNumberOfPosts = postElementSet.size();
+        int currentNumberOfPosts = instagramUrlsSet.size();
         // If there are new posts, process the HTML document
         if (currentNumberOfPosts > lastNumberOfPosts) {
             scrollCount = 0;
             int postIndex = 0;
-            for (InstagramPostElement postElement : postElementSet) {
+            for (InstagramPostElement postElement : instagramUrlsSet) {
                 final int index = postIndex++;
 
                 if (checkInfiniteSroll(index)) {
@@ -878,7 +891,7 @@ public class ImageSlideFragment extends Fragment {
                 }
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
-                    String postHref = postElement.getElement().attr("href");
+                    String postHref = postElement.getHref();
 
                     requestQueue.add(new StringRequest("https://instagram.com" + postHref,
                             // Success listener
@@ -893,8 +906,8 @@ public class ImageSlideFragment extends Fragment {
                                 if (beforeAddSize < afterAddSize) {
                                     if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
                                         newInstagramPosts.add(post);
-                                        Picasso.get().load(post.getImgUrl()).fetch();
-                                        Picasso.get().load(post.getUserProfilePicUrl()).fetch();
+                                        Picasso.get().load(post.getImgUrl()).tag("mainImg").fetch();
+                                        Picasso.get().load(post.getUserProfilePicUrl()).tag("profileImg").fetch();
                                         maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
                                     }
                                 }
@@ -907,7 +920,7 @@ public class ImageSlideFragment extends Fragment {
             scrollCount++;
         }
 
-        lastNumberOfPosts = postElementSet.size();
+        lastNumberOfPosts = instagramUrlsSet.size();
         if (currentNumberOfPosts == 0) {
             // Wait for the page to be fully loaded the first time -> less delay
             instagramWebScraper.continueGettingPosts(Constants.FIRST_SCROLL_DELAY);
@@ -952,13 +965,5 @@ public class ImageSlideFragment extends Fragment {
 //        log.debug("availHeapSizeInMB: " + availHeapSizeInMB + "MB");
 
         Bugfender.d(bugfenderTag, "Heap usage: " + usedMemInMB + "/" + maxHeapSizeInMB + "MB");
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
-        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
     }
 }

@@ -10,12 +10,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class LicenseUtil {
     private static boolean isValidLicense = false;
 
-    public static boolean isKeyIdFileInitialized() {
-        File file = new File(DeviceUtil.getDataPath(), Constants.LICENSE_ID_FILENAME);
-
-        return file.exists();
-    }
-
     public static boolean isKeyFileExisted() {
         File file = new File(DeviceUtil.getDataPath(), Constants.LICENSE_KEY_FILENAME);
 
@@ -24,6 +18,8 @@ public class LicenseUtil {
 
     public static void initKeyIdFile() {
         File licenseFile = new File(DeviceUtil.getDataPath(), Constants.LICENSE_ID_FILENAME);
+
+        if (licenseFile.exists()) return;
 
         int keyId = ThreadLocalRandom.current().nextInt(Constants.BASE_KEY_SEED_MINIMUM_VALUE, Constants.BASE_KEY_SEED_MAXIMUM_VALUE);
 

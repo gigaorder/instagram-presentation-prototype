@@ -1,11 +1,13 @@
 package com.demo.instagram_presentation.hotfix_plugin;
 
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
 
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.activity.MainActivity;
+import com.demo.instagram_presentation.util.Constants;
 import com.tencent.tinker.lib.service.DefaultTinkerResultService;
 import com.tencent.tinker.lib.service.PatchResult;
 import com.tencent.tinker.lib.util.TinkerLog;
@@ -27,19 +29,18 @@ public class TinkerResultService extends DefaultTinkerResultService {
         //first, we want to kill the recover process
         TinkerServiceInternals.killTinkerPatchServiceProcess(getApplicationContext());
 
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(() -> {
-            if (result.isSuccess) {
-                Toast.makeText(getApplicationContext(), "patch success, please restart process", Toast.LENGTH_LONG).show();
-            } else {
-//                Toast.makeText(getApplicationContext(), "patch fail, please check reason", Toast.LENGTH_LONG).show();
-            }
-        });
-
         if (result.isSuccess) {
             deleteRawPatchFile(new File(result.rawPatchFilePath));
 
             if (checkIfNeedKill(result)) {
+                Intent intent = new Intent(Constants.DISPLAY_APP_MESSAGE_ACTION);
+                intent.putExtra("message", "A new patch is available. App is updating");
+                getApplicationContext().sendBroadcast(intent);
+                try {
+                    Thread.sleep(30 * 1000); // 30s
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 restartProcess();
             } else {
                 TinkerLog.i(TAG, "I have already install the newly patch version!");
