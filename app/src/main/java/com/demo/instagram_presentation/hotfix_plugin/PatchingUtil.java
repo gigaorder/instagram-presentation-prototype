@@ -26,7 +26,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class PatchingUtil {
-    private static final String TAG = MainActivity.DEVICE_ID;
+    private static final String TAG = InstagramApplicationContext.DEVICE_ID;
     private static final int MAX_DOWNLOAD_RETRY = 12;
     public static final int MAX_UPDATE_RETRY = 12;
     public static int updateCounter = 0;
@@ -75,7 +75,7 @@ public class PatchingUtil {
         String version = sharedPreferences.getString("originalVersion", BuildConfig.VERSION_NAME);
 
         String patchUrl = String.format("%s/static-apk/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constant.APK_NAME);
-        String patchPath = MainActivity.self.getFilesDir().getAbsolutePath() +"/" + Constant.APK_NAME;
+        String patchPath = InstagramApplicationContext.context.getFilesDir().getAbsolutePath() +"/" + Constant.APK_NAME;
         String md5Url = String.format("%s/md5/%s/%s/%s", domain, BuildConfig.TOPIC, version, Constant.APK_NAME);
 
         setUrlPreferences(patchUrl, patchPath, md5Url);

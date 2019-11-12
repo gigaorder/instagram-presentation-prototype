@@ -7,10 +7,10 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,10 +26,11 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.data.scraper.InstagramLogin;
 import com.demo.instagram_presentation.data.scraper.InstagramWebScraper;
 import com.demo.instagram_presentation.hotfix_plugin.Constant;
@@ -42,11 +43,6 @@ import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.InstagramUtil;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
-import com.google.gson.JsonParser;
-import com.squareup.picasso.LruCache;
-import com.squareup.picasso.MemoryPolicy;
-import com.squareup.picasso.NetworkPolicy;
-import com.squareup.picasso.Picasso;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -166,7 +162,6 @@ public class ImageSlideFragment extends Fragment {
     private Runnable imagePresentationLoader;
     private final Handler handler = new Handler();
     private SharedPreferences sharedPreferences;
-    private JsonParser jsonParser;
 
     // Configs
     private List<String> excludedHashtags;
@@ -216,7 +211,7 @@ public class ImageSlideFragment extends Fragment {
     private int scrollCount;
 
     private final Runtime runtime = Runtime.getRuntime();
-    private final String bugfenderTag = MainActivity.DEVICE_ID;
+    private final String bugfenderTag = InstagramApplicationContext.DEVICE_ID;
 
     private Context context;
 
@@ -230,21 +225,18 @@ public class ImageSlideFragment extends Fragment {
         // Init tools
         requestQueue = Volley.newRequestQueue(getContext());
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
-        jsonParser = new JsonParser();
 
         // Bind context
         context = getContext();
 
         // Check for update
-        new AsyncTask<Void, Void, Void>() {
-
-            @Override
-            protected Void doInBackground(Void... voids) {
-                String domain = AppPreferencesUtil.getSharedPreferences().getString(Constant.DOMAIN_KEY, Constant.DEFAULT_DOMAIN);
-                PatchingUtil.checkForUpdate(domain);
-                return null;
-            }
-        }.execute();
+        Thread updateThread = new Thread(() -> {
+            String domain = AppPreferencesUtil.getSharedPreferences().getString(Constant.DOMAIN_KEY, Constant.DEFAULT_DOMAIN);
+            PatchingUtil.checkForUpdate(domain);
+        });
+        updateThread.setDaemon(true);
+        updateThread.setName("Tinker Update");
+        updateThread.start();
     }
 
     @Override
@@ -316,6 +308,7 @@ public class ImageSlideFragment extends Fragment {
                             nextSlideIndex = 0;
 
                             txtError.setVisibility(View.GONE);
+                            userInfoSection.setVisibility(View.VISIBLE);
                             txtProgress.setVisibility(View.VISIBLE);
                             txtProgress.setText(progressGettingFeedData);
                             progressBar.setProgress(0);
@@ -415,8 +408,11 @@ public class ImageSlideFragment extends Fragment {
 
         instagramPosts.add(instagramPost);
 
-        Picasso.get().load(instagramPost.getImgUrl()).tag("mainImg").fetch();
-        Picasso.get().load(instagramPost.getUserProfilePicUrl()).tag("profileImg").fetch();
+        if (instagramPosts.size() <= 5) {
+            // cache first 5 posts
+            Glide.with(context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMainWidth, imgMainHeight);
+            Glide.with(context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(imgMainWidth, imgMainHeight);
+        }
 
         if (!maxNumberOfPostsReached) {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
@@ -471,11 +467,16 @@ public class ImageSlideFragment extends Fragment {
 
 //                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
-                Picasso.get().load(post.getImgUrl())
-                        .tag("mainImg")
-                        .fit()
+                Glide.with(context).load(post.getImgUrl())
                         .centerCrop()
+                        .transition(DrawableTransitionOptions.withCrossFade())
                         .into(imgMain);
+
+                // cache new post
+                if (index + 5 < instagramPosts.size()) {
+                    Glide.with(context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMainWidth, imgMainHeight);
+                    Glide.with(context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(imgMainWidth, imgMainHeight);
+                }
 
                 DecimalFormat numberFormatter = new DecimalFormat("#,###");
                 String noOfLikes = numberFormatter.format(post.getLikesCount()) + " likes";
@@ -494,12 +495,9 @@ public class ImageSlideFragment extends Fragment {
 
                 if (!post.getUserProfilePicUrl().equals(lastUserProfilePicUrl)) {
                     lastUserProfilePicUrl = post.getUserProfilePicUrl();
-                    Picasso.get().load(lastUserProfilePicUrl)
-                            .tag("profileImg")
-                            .networkPolicy(NetworkPolicy.NO_CACHE)
-                            .memoryPolicy(MemoryPolicy.NO_CACHE)
-                            .fit()
+                    Glide.with(context).load(lastUserProfilePicUrl)
                             .centerCrop()
+                            .transition(DrawableTransitionOptions.withCrossFade())
                             .into(imgProfile);
                 }
 
@@ -516,27 +514,25 @@ public class ImageSlideFragment extends Fragment {
         progressBar.setVisibility(View.GONE);
         txtProgress.setVisibility(View.GONE);
         progressBar.setProgress(0);
+
+        // hide user info section to make layout do not look weird
+        if (!isProfilePicDisplayed && !isUsernameDisplayed) {
+            userInfoSection.setVisibility(View.GONE);
+        }
     }
 
     private void hideComponents() {
-        imgProfile.setVisibility(View.INVISIBLE);
+        userInfoSection.setVisibility(View.GONE);
+        imgProfile.setVisibility(View.GONE);
         txtUsername.setVisibility(View.GONE);
         imgMain.setVisibility(View.GONE);
         txtNumberOfLikes.setVisibility(View.GONE);
         txtNumberOfComments.setVisibility(View.GONE);
         txtPostCaption.setVisibility(View.GONE);
-
-        if (!isUsernameDisplayed && !isProfilePicDisplayed) {
-            userInfoSection.setVisibility(View.GONE);
-        }
     }
 
     private void showComponents() {
         imgMain.setVisibility(View.VISIBLE);
-
-        if (isUsernameDisplayed || isProfilePicDisplayed) {
-            userInfoSection.setVisibility(View.VISIBLE);
-        }
 
         if (isUsernameDisplayed) {
             txtUsername.setVisibility(View.VISIBLE);
@@ -733,16 +729,20 @@ public class ImageSlideFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        MainActivity.self.registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
-        MainActivity.self.registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
+        try {
+            getActivity().registerReceiver(submitSecurityCodeReceiver, submitSecurityCodeAction);
+            getActivity().registerReceiver(getNewSecurityCodeReceiver, getNewSecurityCodeAction);
+        } catch (NullPointerException e) {
+            Log.e(InstagramApplicationContext.DEVICE_ID, "Cant get parent activity");
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
         handler.removeCallbacks(imagePresentationLoader);
-        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, submitSecurityCodeReceiver);
-        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, getNewSecurityCodeReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(getActivity(), submitSecurityCodeReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(getActivity(), getNewSecurityCodeReceiver);
     }
 
     private void toggleDisplayingWebview(boolean isDisplayed) {
@@ -826,7 +826,13 @@ public class ImageSlideFragment extends Fragment {
                         instagramPostHtml -> {
                             //Mark the element as requested -> won't be processed in the next iteration
                             postElement.setRequested(true);
-                            InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                            InstagramPost post = null;
+                            try {
+                                post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            if (post == null) return;
 
                             int beforeAddSize = instagramPostsSet.size();
                             instagramPostsSet.add(post);
@@ -898,7 +904,14 @@ public class ImageSlideFragment extends Fragment {
                             instagramPostHtml -> {
                                 //Mark the element as requested -> won't be processed in the next iteration
                                 postElement.setRequested(true);
-                                InstagramPost post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                                InstagramPost post = null;
+                                try {
+                                    post = InstagramUtil.parseInstagramPostHtml(instagramPostHtml, index, postHref);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+
+                                if (post == null) return;
 
                                 int beforeAddSize = instagramPostsSet.size();
                                 instagramPostsSet.add(post);
@@ -906,8 +919,6 @@ public class ImageSlideFragment extends Fragment {
                                 if (beforeAddSize < afterAddSize) {
                                     if (!hasExcludedHashtags(post.getCaption()) && hasRequiredHashtags(post.getCaption())) {
                                         newInstagramPosts.add(post);
-                                        Picasso.get().load(post.getImgUrl()).tag("mainImg").fetch();
-                                        Picasso.get().load(post.getUserProfilePicUrl()).tag("profileImg").fetch();
                                         maxNumberOfPostsReached = checkPostLimit(newInstagramPosts);
                                     }
                                 }
@@ -936,17 +947,15 @@ public class ImageSlideFragment extends Fragment {
             public void run() {
                 try {
                     int networkStrength = NetworkUtil.getNetworkStrength(5);
+
                     String packageName = BuildConfig.APPLICATION_ID;
-                    String drawableName = "ic_signal_wifi_" + networkStrength + "_bar_black_48dp";
+                    String drawableName = "ic_signal_wifi_" + networkStrength + "_bar";
 
                     int drawableId = getResources().getIdentifier(packageName + ":drawable/" + drawableName, null, null);
                     imgNetworkStrength.setImageDrawable(getResources().getDrawable(drawableId));
-
-                    if (imgNetworkStrength.getVisibility() == View.GONE) {
-                        imgNetworkStrength.setVisibility(View.VISIBLE);
-                    }
+                    imgNetworkStrength.setVisibility(View.VISIBLE);
                 } catch (Exception e) {
-//                    Bugfender.e(bugfenderTag, "Failed while scanning network strength");
+//                    imgNetworkStrength.setVisibility(View.GONE);
                 } finally {
                     handler.postDelayed(this, intervalInMs);
                 }

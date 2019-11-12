@@ -10,6 +10,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.activity.MainActivity;
 
@@ -19,7 +20,7 @@ import org.slf4j.LoggerFactory;
 public class AppExceptionHandler implements Thread.UncaughtExceptionHandler {
     private Activity activity;
     private Logger log;
-    private final String bugfenderTag = MainActivity.DEVICE_ID;
+    private final String bugfenderTag = InstagramApplicationContext.DEVICE_ID;
 
     public AppExceptionHandler(Activity activity) {
         this.activity = activity;

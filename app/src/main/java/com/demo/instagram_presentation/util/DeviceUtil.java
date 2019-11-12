@@ -2,6 +2,7 @@ package com.demo.instagram_presentation.util;
 
 import android.os.Environment;
 
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.activity.MainActivity;
 
 public class DeviceUtil {
@@ -10,7 +11,7 @@ public class DeviceUtil {
         if (dataPath == null || dataPath.isEmpty()) {
             dataPath = PermissionUtil.hasStoragePermissions() ?
                     Environment.getExternalStorageDirectory().getAbsolutePath() :
-                    MainActivity.self.getFilesDir().getAbsolutePath();
+                    InstagramApplicationContext.context.getFilesDir().getAbsolutePath();
         }
         return dataPath;
     }

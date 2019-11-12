@@ -29,7 +29,7 @@ public class PermissionUtil {
         Manifest.permission.ACCESS_NETWORK_STATE
     };
 
-    public static void askForRequiredPermissions() {
+    public static void askForRequiredPermissions(Activity activity) {
         List<String> requestPermissions = new ArrayList<>();
         for (String permission: permissions) {
             if (!hasPermission(permission)) {
@@ -37,7 +37,7 @@ public class PermissionUtil {
             }
         }
         if (!requestPermissions.isEmpty()) {
-            ActivityCompat.requestPermissions(MainActivity.self, requestPermissions.toArray(new String[0]), 0);
+            ActivityCompat.requestPermissions(activity, requestPermissions.toArray(new String[0]), 0);
         }
     }
 

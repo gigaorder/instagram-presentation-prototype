@@ -9,33 +9,26 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.provider.Settings.Secure;
 import android.widget.TextView;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.demo.instagram_presentation.BuildConfig;
-import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
+import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.fragment.ConfigFragment;
 import com.demo.instagram_presentation.fragment.ImageSlideFragment;
-import com.demo.instagram_presentation.util.PermissionUtil;
-import com.demo.instagram_presentation.service.RestartAppService;
-import com.demo.instagram_presentation.broadcast_receiver.WifiScanResultReceiver;
 import com.demo.instagram_presentation.util.AppExceptionHandler;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.demo.instagram_presentation.util.BroadcastReceiverUtil;
 import com.demo.instagram_presentation.util.Constants;
 import com.demo.instagram_presentation.util.LicenseUtil;
 import com.demo.instagram_presentation.util.NetworkUtil;
-import com.demo.instagram_presentation.webserver.NanoHttpdWebServer;
+import com.demo.instagram_presentation.util.PermissionUtil;
 import com.google.firebase.messaging.FirebaseMessaging;
-import com.squareup.picasso.LruCache;
-import com.squareup.picasso.Picasso;
-
-import java.io.IOException;
 
 import butterknife.BindString;
 import butterknife.BindView;
@@ -47,16 +40,9 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.main_activity_app_message)
     TextView appMessage;
 
-    public static MainActivity self;
-    public static final String DEVICE_ID = Secure.getString(InstagramApplicationContext.context.getContentResolver(), Secure.ANDROID_ID);
-
-    private LruCache picassoCache;
-    private Picasso picassoInstance;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        self = this;
 
         LicenseUtil.initKeyIdFile();
         AppPreferencesUtil.initSharedPreference(getApplicationContext());
@@ -72,11 +58,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        PermissionUtil.askForRequiredPermissions();
-
-//        picassoCache = new LruCache(this);
-//        picassoInstance = new Picasso.Builder(this).memoryCache(picassoCache).build();
-//        Picasso.setSingletonInstance(picassoInstance);
+        PermissionUtil.askForRequiredPermissions(MainActivity.this);
 
         boolean deviceBoot = getIntent().getBooleanExtra("deviceBoot", false);
         if (!deviceBoot && AppPreferencesUtil.isAbleToDisplaySlideshow()) {
@@ -103,19 +85,13 @@ public class MainActivity extends AppCompatActivity {
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY );
     }
 
-    private void showFragment(Fragment newFragment) {
-        getSupportFragmentManager().beginTransaction()
-            .add(R.id.main_activity_fragment_container, newFragment)
-            .commit();
+    private void showFragment(Fragment fragment) {
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.add(R.id.main_activity_fragment_container, fragment).commit();
     }
 
-    private Intent restartServiceIntent;
     private void setUpServices() {
         NetworkUtil.initNetworkService();
-
-        restartServiceIntent = new Intent(this, RestartAppService.class);
-        startService(restartServiceIntent);
-
         initBroadcastReceivers();
 
         FirebaseMessaging.getInstance().subscribeToTopic(BuildConfig.TOPIC);
@@ -130,10 +106,6 @@ public class MainActivity extends AppCompatActivity {
         showImageSlideReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-//                picassoCache.clear();
-//                picassoInstance.cancelTag("profileImg");
-//                picassoInstance.cancelTag("mainImg");
-//                showFragment(new ImageSlideFragment(picassoInstance));
                 Intent restartIntent = new Intent(MainActivity.this, MainActivity.class);
                 restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -191,23 +163,5 @@ public class MainActivity extends AppCompatActivity {
         BroadcastReceiverUtil.unregisterReceiver(this, wifiScanResultReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, showConfigScreenReceiver);
         BroadcastReceiverUtil.unregisterReceiver(this, displayAppMessageReceiver);
-    }
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        finish();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        finish();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        stopService(restartServiceIntent);
     }
 }

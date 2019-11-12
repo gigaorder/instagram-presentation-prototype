@@ -11,6 +11,8 @@ public class BroadcastReceiverUtil {
         } catch (IllegalArgumentException e) {
             // No need to handle anything as the receiver is not registered <- what we need
             Log.e("Error", "Tried to unregister a receiver that has not been registered");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

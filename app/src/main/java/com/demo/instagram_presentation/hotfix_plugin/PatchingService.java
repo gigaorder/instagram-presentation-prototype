@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.BuildConfig;
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 import com.google.firebase.messaging.FirebaseMessagingService;
@@ -14,7 +15,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import com.tencent.tinker.lib.tinker.Tinker;
 
 public class PatchingService extends FirebaseMessagingService {
-    private final String TAG = MainActivity.DEVICE_ID;
+    private final String TAG = InstagramApplicationContext.DEVICE_ID;
     private final String LOAD_PATCH = "load_patch";
     private final String CLEAN_PATCH = "clean_patch";
     private final String LOAD_LIBRARY = "load_library";

@@ -25,8 +25,8 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 
 import com.demo.instagram_presentation.BuildConfig;
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
-import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.broadcast_receiver.WifiConnectReceiver;
 import com.demo.instagram_presentation.listener.WifiConnectListener;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
@@ -100,9 +100,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
     private CountDownTimer configServerTimer;
 
-    public ConfigFragment() {
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -112,21 +109,18 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         thisFragment = this;
 
         // Load background images
-//        Picasso.get().load(R.drawable.fallback_screen_bg_16_9).centerCrop().fit().noFade().into(imgBackground);
-//        Picasso.get().load(R.drawable.feed2wall_logo_white).centerCrop().fit().noFade().into(imgLogoText);
-//        Picasso.get().load(R.drawable.rockiton).centerCrop().fit().noFade().into(imgLogo);
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
-        wifiManager = (WifiManager) MainActivity.self.getApplicationContext().getSystemService(WIFI_SERVICE);
+        wifiManager = (WifiManager) InstagramApplicationContext.context.getSystemService(WIFI_SERVICE);
         instagramSourceUrl = sharedPreferences.getString(instagramSourceUrlPrefKey, null);
         instagramSourceTags = sharedPreferences.getString(instagramSourceTagsPrefKey, null);
         isRequiredLogin = sharedPreferences.getBoolean(requiredLoginPrefKey, false);
 
-        AppPreferencesUtil.setDefaultImageSize();
+        AppPreferencesUtil.setDefaultImageSize(getActivity());
 
         txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
-        txtAppInfo.setText(String.format(Locale.ENGLISH, appInfoMsg, BuildConfig.VERSION_NAME, MainActivity.DEVICE_ID));
+        txtAppInfo.setText(String.format(Locale.ENGLISH, appInfoMsg, BuildConfig.VERSION_NAME, InstagramApplicationContext.DEVICE_ID));
 
         Handler handler = new Handler();
         new CountDownTimer(Constants.NETWORK_STATUS_CHECK_DELAY, 1000) {
@@ -139,12 +133,12 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             public void onFinish() {
                 if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
                     // If Wi-Fi is available and source URL/tags are not null -> replace the fragment with SlideFragment
-                    MainActivity.self.sendBroadcast(new Intent(Constants.SHOW_IMAGE_SLIDE_ACTION));
+                    InstagramApplicationContext.context.sendBroadcast(new Intent(Constants.SHOW_IMAGE_SLIDE_ACTION));
                 } else {
                     if (NanoHttpdWebServer.getInstance().isAlive()) {
                         wifiConnectReceiver = new WifiConnectReceiver(thisFragment);
                         IntentFilter ifWifiStateChanged = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-                        MainActivity.self.registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
+                        getActivity().registerReceiver(wifiConnectReceiver, ifWifiStateChanged);
 
                         if (NetworkUtil.isWifiConnected()) {
                             setServerInfoOnWifi("");
@@ -160,9 +154,9 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
                             // Start Wi-Fi Direct
                             // Config server info will be set after Wi-Fi Direct is established (in GroupInfoListener)
-                            wifiP2pManager = (WifiP2pManager) MainActivity.self.getSystemService(WIFI_P2P_SERVICE);
-                            wifiP2pChannel = wifiP2pManager.initialize(MainActivity.self.getApplicationContext(),
-                                    MainActivity.self.getMainLooper(), null);
+                            wifiP2pManager = (WifiP2pManager) getActivity().getSystemService(WIFI_P2P_SERVICE);
+                            wifiP2pChannel = wifiP2pManager.initialize(InstagramApplicationContext.context,
+                                    getActivity().getMainLooper(), null);
                             wifiP2pManager.createGroup(wifiP2pChannel, onWifiDirectStartedListener);
 
                             // Delay because Wi-Fi Direct may not be initialized immediately
@@ -316,7 +310,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             }
 
             if (AppPreferencesUtil.isAbleToDisplaySlideshow()) {
-                MainActivity.self.sendBroadcast(new Intent(Constants.SHOW_IMAGE_SLIDE_ACTION));
+                InstagramApplicationContext.context.sendBroadcast(new Intent(Constants.SHOW_IMAGE_SLIDE_ACTION));
             } else {
                 setErrorMsg();
             }
@@ -331,6 +325,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             wifiP2pManager.removeGroup(wifiP2pChannel, null);
         }
 
-        BroadcastReceiverUtil.unregisterReceiver(MainActivity.self, wifiConnectReceiver);
+        BroadcastReceiverUtil.unregisterReceiver(getActivity(), wifiConnectReceiver);
     }
 }

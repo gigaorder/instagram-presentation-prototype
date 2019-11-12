@@ -1,19 +1,20 @@
 package com.demo.instagram_presentation.util;
 
+import android.app.Activity;
 import android.util.DisplayMetrics;
 
 import com.demo.instagram_presentation.activity.MainActivity;
 
 public class ScreenUtil {
-    public static int getScreenWidth() {
+    public static int getScreenWidth(Activity activity) {
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        MainActivity.self.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         return displayMetrics.widthPixels;
     }
 
-    public static int getScreenHeight() {
+    public static int getScreenHeight(Activity activity) {
         DisplayMetrics displayMetrics = new DisplayMetrics();
-        MainActivity.self.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         return displayMetrics.heightPixels;
     }
 }

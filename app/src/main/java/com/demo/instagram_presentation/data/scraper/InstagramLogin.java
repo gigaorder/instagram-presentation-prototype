@@ -8,11 +8,12 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.util.Constants;
 
 public class InstagramLogin {
-    private final String TAG = MainActivity.DEVICE_ID;
+    private final String TAG = InstagramApplicationContext.DEVICE_ID;
 
     public static final int LOGIN_SUCCESS = 0;
 

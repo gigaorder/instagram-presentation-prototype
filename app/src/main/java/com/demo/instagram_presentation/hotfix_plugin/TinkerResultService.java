@@ -6,6 +6,7 @@ import android.os.Looper;
 import android.widget.Toast;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.util.Constants;
 import com.tencent.tinker.lib.service.DefaultTinkerResultService;
@@ -16,7 +17,7 @@ import com.tencent.tinker.lib.util.TinkerServiceInternals;
 import java.io.File;
 
 public class TinkerResultService extends DefaultTinkerResultService {
-    private static final String TAG = MainActivity.DEVICE_ID;
+    private static final String TAG = InstagramApplicationContext.DEVICE_ID;
 
     @Override
     public void onPatchResult(final PatchResult result) {

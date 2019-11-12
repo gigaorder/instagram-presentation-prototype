@@ -11,11 +11,12 @@ import androidx.annotation.Nullable;
 import androidx.preference.PreferenceManager;
 
 import com.bugfender.sdk.Bugfender;
+import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.activity.MainActivity;
 import com.demo.instagram_presentation.util.AppPreferencesUtil;
 
 public class UpdateManuallyService extends Service {
-    private final String TAG = MainActivity.DEVICE_ID;
+    private final String TAG = InstagramApplicationContext.DEVICE_ID;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

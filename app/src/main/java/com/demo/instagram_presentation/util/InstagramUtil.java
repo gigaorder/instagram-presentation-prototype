@@ -33,7 +33,7 @@ public class InstagramUtil {
         return "https://www.instagram.com/explore/tags/" + tag;
     }
 
-    public static InstagramPost parseInstagramPostHtml(String html, int postIndex, String postHref) {
+    public static InstagramPost parseInstagramPostHtml(String html, int postIndex, String postHref) throws Exception {
         if (jsonParser == null) {
             jsonParser = new JsonParser();
         }
