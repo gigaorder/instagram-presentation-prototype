@@ -31,8 +31,10 @@ public class AppConfigController {
     private String isCommentsDisplayedPrefKey;
     private String isPostCaptionDisplayedPrefKey;
     private String isProfilePicDisplayedPrefKey;
-    private String isUsernameDisplayPrefKey;
+    private String isUsernameDisplayedPrefKey;
+    private String isNetworkStrengthDisplayedPrefKey;
     private String excludedHashtagsPrefKey;
+    private String autoSizePrefKey;
     private String imgMainHeightPrefKey;
     private String imgMainWidthPrefKey;
     private String profilePicWidthPrefKey;
@@ -62,10 +64,12 @@ public class AppConfigController {
         boolean isCommentsDisplayed = sharedPreferences.getBoolean(isCommentsDisplayedPrefKey, true);
         boolean isCaptionDisplayed = sharedPreferences.getBoolean(isPostCaptionDisplayedPrefKey, true);
         boolean isProfilePicDisplayed = sharedPreferences.getBoolean(isProfilePicDisplayedPrefKey, true);
-        boolean isUsernameDisplayed = sharedPreferences.getBoolean(isUsernameDisplayPrefKey, true);
+        boolean isUsernameDisplayed = sharedPreferences.getBoolean(isUsernameDisplayedPrefKey, true);
+        boolean isNetworkStrengthDisplayed = sharedPreferences.getBoolean(isNetworkStrengthDisplayedPrefKey, false);
         String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, "");
 
         // Size configs
+        boolean autoSize = sharedPreferences.getBoolean(autoSizePrefKey, true);
         int profilePicWidth = getIntValueFromPref(profilePicWidthPrefKey, Constants.DEFAULT_PROFILE_PIC_WIDTH);
         int profilePicHeight = getIntValueFromPref(profilePicHeightPrefKey, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
         int usernameTextSize = getIntValueFromPref(usernameTextSizePrefKey, Constants.DEFAULT_USERNAME_TEXT_SIZE);
@@ -90,7 +94,9 @@ public class AppConfigController {
                 .isCaptionDisplayed(isCaptionDisplayed)
                 .isProfilePicDisplayed(isProfilePicDisplayed)
                 .isUsernameDisplayed(isUsernameDisplayed)
+                .isNetworkStrengthDisplayed(isNetworkStrengthDisplayed)
                 //Size variables
+                .autoSize(autoSize)
                 .profilePicWidth(profilePicWidth)
                 .profilePicHeight(profilePicHeight)
                 .usernameTextSize(usernameTextSize)
@@ -137,16 +143,20 @@ public class AppConfigController {
                 prefEditor.putBoolean(isCommentsDisplayedPrefKey, appConfig.isCommentsDisplayed());
                 prefEditor.putBoolean(isPostCaptionDisplayedPrefKey, appConfig.isCaptionDisplayed());
                 prefEditor.putBoolean(isProfilePicDisplayedPrefKey, appConfig.isProfilePicDisplayed());
-                prefEditor.putBoolean(isUsernameDisplayPrefKey, appConfig.isUsernameDisplayed());
+                prefEditor.putBoolean(isUsernameDisplayedPrefKey, appConfig.isUsernameDisplayed());
+                prefEditor.putBoolean(isNetworkStrengthDisplayedPrefKey, appConfig.isNetworkStrengthDisplayed());
                 // Size prefs
-                prefEditor.putString(imgMainHeightPrefKey, String.valueOf(appConfig.getImgMainHeight()));
-                prefEditor.putString(imgMainWidthPrefKey, String.valueOf(appConfig.getImgMainWidth()));
-                prefEditor.putString(profilePicWidthPrefKey, String.valueOf(appConfig.getProfilePicWidth()));
-                prefEditor.putString(profilePicHeightPrefKey, String.valueOf(appConfig.getProfilePicHeight()));
-                prefEditor.putString(usernameTextSizePrefKey, String.valueOf(appConfig.getUsernameTextSize()));
-                prefEditor.putString(likeTextSizePrefKey, String.valueOf(appConfig.getLikeTextSize()));
-                prefEditor.putString(commentTextSizePrefKey, String.valueOf(appConfig.getCommentTextSize()));
-                prefEditor.putString(captionTextSizePrefKey, String.valueOf(appConfig.getCaptionTextSize()));
+                prefEditor.putBoolean(autoSizePrefKey, appConfig.isAutoSize());
+                if (!appConfig.isAutoSize()) {
+                    prefEditor.putString(imgMainHeightPrefKey, String.valueOf(appConfig.getImgMainHeight()));
+                    prefEditor.putString(imgMainWidthPrefKey, String.valueOf(appConfig.getImgMainWidth()));
+                    prefEditor.putString(profilePicWidthPrefKey, String.valueOf(appConfig.getProfilePicWidth()));
+                    prefEditor.putString(profilePicHeightPrefKey, String.valueOf(appConfig.getProfilePicHeight()));
+                    prefEditor.putString(usernameTextSizePrefKey, String.valueOf(appConfig.getUsernameTextSize()));
+                    prefEditor.putString(likeTextSizePrefKey, String.valueOf(appConfig.getLikeTextSize()));
+                    prefEditor.putString(commentTextSizePrefKey, String.valueOf(appConfig.getCommentTextSize()));
+                    prefEditor.putString(captionTextSizePrefKey, String.valueOf(appConfig.getCaptionTextSize()));
+                }
                 prefEditor.putString(presentIntervalPrefKey, String.valueOf(appConfig.getPresentInterval()));
                 prefEditor.putString(refreshIntervalPrefKey, String.valueOf(appConfig.getRefreshInterval()));
 
@@ -169,28 +179,30 @@ public class AppConfigController {
 
     private void getPreferenceKeys() {
         // Data pref keys
-        instagramSourcePrefKey = context.getResources().getString(R.string.pref_instagram_source);
-        instagramSourceTagsPrefKey = context.getResources().getString(R.string.pref_instagram_source_tags);
-        authenticatedPrefKey = context.getResources().getString(R.string.pref_instagram_authenticated);
-        postNoPrefKey = context.getResources().getString(R.string.pref_post_no);
-        isLikesDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_likes_displayed);
-        isCommentsDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_comments_displayed);
-        isPostCaptionDisplayedPrefKey = context.getResources().getString(R.string.pref_is_post_caption_displayed);
-        isProfilePicDisplayedPrefKey = context.getResources().getString(R.string.pref_is_profile_pic_displayed);
-        isUsernameDisplayPrefKey = context.getResources().getString(R.string.pref_is_username_displayed);
-        excludedHashtagsPrefKey = context.getResources().getString(R.string.pref_excluded_hashtags);
-        requiredLoginPrefKey = context.getResources().getString(R.string.pref_required_login);
+        instagramSourcePrefKey = context.getString(R.string.pref_instagram_source);
+        instagramSourceTagsPrefKey = context.getString(R.string.pref_instagram_source_tags);
+        authenticatedPrefKey = context.getString(R.string.pref_instagram_authenticated);
+        postNoPrefKey = context.getString(R.string.pref_post_no);
+        isLikesDisplayedPrefKey = context.getString(R.string.pref_is_post_likes_displayed);
+        isCommentsDisplayedPrefKey = context.getString(R.string.pref_is_post_comments_displayed);
+        isPostCaptionDisplayedPrefKey = context.getString(R.string.pref_is_post_caption_displayed);
+        isProfilePicDisplayedPrefKey = context.getString(R.string.pref_is_profile_pic_displayed);
+        isUsernameDisplayedPrefKey = context.getString(R.string.pref_is_username_displayed);
+        isNetworkStrengthDisplayedPrefKey = context.getString(R.string.pref_is_network_strength_displayed);
+        excludedHashtagsPrefKey = context.getString(R.string.pref_excluded_hashtags);
+        requiredLoginPrefKey = context.getString(R.string.pref_required_login);
         // Size pref keys
-        imgMainHeightPrefKey = context.getResources().getString(R.string.pref_img_main_height);
-        imgMainWidthPrefKey = context.getResources().getString(R.string.pref_img_main_width);
-        profilePicWidthPrefKey = context.getResources().getString(R.string.pref_profile_pic_width);
-        profilePicHeightPrefKey = context.getResources().getString(R.string.pref_profile_pic_height);
-        usernameTextSizePrefKey = context.getResources().getString(R.string.pref_username_text_size);
-        likeTextSizePrefKey = context.getResources().getString(R.string.pref_like_text_size);
-        commentTextSizePrefKey = context.getResources().getString(R.string.pref_comment_text_size);
-        captionTextSizePrefKey = context.getResources().getString(R.string.pref_caption_text_size);
-        presentIntervalPrefKey = context.getResources().getString(R.string.pref_present_interval);
-        refreshIntervalPrefKey = context.getResources().getString(R.string.pref_refresh_interval);
+        autoSizePrefKey = context.getString(R.string.pref_auto_size);
+        imgMainHeightPrefKey = context.getString(R.string.pref_img_main_height);
+        imgMainWidthPrefKey = context.getString(R.string.pref_img_main_width);
+        profilePicWidthPrefKey = context.getString(R.string.pref_profile_pic_width);
+        profilePicHeightPrefKey = context.getString(R.string.pref_profile_pic_height);
+        usernameTextSizePrefKey = context.getString(R.string.pref_username_text_size);
+        likeTextSizePrefKey = context.getString(R.string.pref_like_text_size);
+        commentTextSizePrefKey = context.getString(R.string.pref_comment_text_size);
+        captionTextSizePrefKey = context.getString(R.string.pref_caption_text_size);
+        presentIntervalPrefKey = context.getString(R.string.pref_present_interval);
+        refreshIntervalPrefKey = context.getString(R.string.pref_refresh_interval);
     }
 
     private int getIntValueFromPref(String key, int defaultValue) {

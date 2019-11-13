@@ -18,9 +18,10 @@ public class AppConfig {
     private boolean isLikesDisplayed;
     private boolean isCommentsDisplayed;
     private boolean isCaptionDisplayed;
-    private boolean isRequiredLogin;
+    private boolean isNetworkStrengthDisplayed;
 
     // Size variables
+    private boolean autoSize;
     private int profilePicWidth;
     private int profilePicHeight;
     private int usernameTextSize;

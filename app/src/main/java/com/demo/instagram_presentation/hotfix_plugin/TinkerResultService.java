@@ -1,5 +1,8 @@
 package com.demo.instagram_presentation.hotfix_plugin;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
@@ -60,6 +63,13 @@ public class TinkerResultService extends DefaultTinkerResultService {
     private void restartProcess() {
         TinkerLog.i(TAG, "app is background now, i can kill quietly");
         //you can send service or broadcast intent to restart your process
-        android.os.Process.killProcess(android.os.Process.myPid());
+        Intent restartIntent = new Intent(getApplicationContext(), MainActivity.class);
+        restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                | Intent.FLAG_ACTIVITY_NEW_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, restartIntent, PendingIntent.FLAG_ONE_SHOT);
+        AlarmManager alarmManager = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+        alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 100, pendingIntent);
+        System.exit(0);
     }
 }

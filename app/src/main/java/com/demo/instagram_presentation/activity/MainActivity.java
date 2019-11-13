@@ -1,5 +1,7 @@
 package com.demo.instagram_presentation.activity;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -106,11 +108,17 @@ public class MainActivity extends AppCompatActivity {
         showImageSlideReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                // To avoid some leak issues, we restart app instead of replacing fragment
                 Intent restartIntent = new Intent(MainActivity.this, MainActivity.class);
                 restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_CLEAR_TASK
                         | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(restartIntent);
+                PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, restartIntent, PendingIntent.FLAG_ONE_SHOT);
+                AlarmManager alarmManager = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+                alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 100, pendingIntent);
+                finish();
+                System.exit(0);
+
             }
         };
 

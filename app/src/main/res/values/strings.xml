@@ -37,6 +37,7 @@
     <string name="pref_is_post_likes_displayed">is_post_likes_displayed</string>
     <string name="pref_is_post_comments_displayed">is_post_comments_displayed</string>
     <string name="pref_is_post_caption_displayed">is_post_caption_displayed</string>
+    <string name="pref_is_network_strength_displayed">is_network_strength_displayed</string>
     <string name="pref_back_button">back_button</string>
     <string name="pref_instagram_source_summary">Must be a valid Instagram URL</string>
     <string name="pref_instagram_source_title">Instagram source URL</string>
@@ -52,6 +53,7 @@
     <string name="pref_is_post_comments_displayed_title">Post comments</string>
     <string name="pref_is_post_caption_displayed_title">Post Caption</string>
     <string name="pref_category_size_title">Size configurations</string>
+    <string name="pref_auto_size">auto_size</string>
     <string name="pref_img_main_width">main_img_width</string>
     <string name="pref_img_main_height">main_img_height</string>
     <string name="pref_img_main_width_title">Main ImageView\'s width</string>

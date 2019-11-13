@@ -26,8 +26,9 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
-import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
+
+import com.demo.instagram_presentation.GlideApp;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
 import com.demo.instagram_presentation.R;
@@ -123,8 +124,12 @@ public class ImageSlideFragment extends Fragment {
     String isProfilePicDisplayedPrefKey;
     @BindString(R.string.pref_is_username_displayed)
     String isUsernameDisplayPrefKey;
+    @BindString(R.string.pref_is_network_strength_displayed)
+    String isNetworkStrengthDisplayedPrefKey;
     @BindString(R.string.pref_excluded_hashtags)
     String excludedHashtagsPrefKey;
+    @BindString(R.string.pref_auto_size)
+    String autoSizePrefKey;
     @BindString(R.string.pref_img_main_height)
     String imgMainHeightPrefKey;
     @BindString(R.string.pref_img_main_width)
@@ -170,6 +175,7 @@ public class ImageSlideFragment extends Fragment {
     private String instagramSourceTags;
     private String instagramUsername;
     private String instagramPassword;
+    private boolean autoSize;
     private int numberOfPostsToDisplay;
     private int profilePicWidth;
     private int profilePicHeight;
@@ -186,6 +192,7 @@ public class ImageSlideFragment extends Fragment {
     private boolean isCaptionDisplayed;
     private boolean isProfilePicDisplayed;
     private boolean isUsernameDisplayed;
+    private boolean isNetworkStrengthDisplayed;
     private InstagramWebScraper instagramWebScraper;
     private Set<InstagramPostElement> instagramUrlsSet;
     private Set<InstagramPost> instagramPostsSet;
@@ -261,12 +268,16 @@ public class ImageSlideFragment extends Fragment {
         setServerInfo("");
         startConfigServerMsgTimer(timerMessageForServer, Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY, txtTimer, true);
         getPreferences();
-        initComponentsSize();
         showWatermark();
+
+        initComponentsSize();
 
         // Hide components, show them after the images are loaded
         hideComponents();
-        startNetworkStrengthScan(Constants.NETWORK_SIGNAL_SCAN_INTERVAL);
+
+        if (isNetworkStrengthDisplayed) {
+            startNetworkStrengthScan(Constants.NETWORK_SIGNAL_SCAN_INTERVAL);
+        }
     }
 
     private boolean initWebScrapper() {
@@ -324,9 +335,14 @@ public class ImageSlideFragment extends Fragment {
                         },
                         err -> {
                             if (err.networkResponse != null && err.networkResponse.statusCode == 404) {
-                                Bugfender.e(bugfenderTag, "Initial request failed due to 404 error, Instagram source may be invalid");
-                                txtError.setVisibility(View.VISIBLE);
-                                txtError.setText(errorInvalidSourceUrl);
+                                Bugfender.e(bugfenderTag, "Initial request failed due to 404 error, Instagram source may be invalid. Retrying...");
+                                sendRequestCounter++;
+                                if (sendRequestCounter < MAX_REQUEST_COUNTER) {
+                                    handler.postDelayed(this, Constants.DEFAULT_FEED_REQUEST_RETRY_INTERVAL);
+                                } else {
+                                    txtError.setVisibility(View.VISIBLE);
+                                    txtError.setText(errorInvalidSourceUrl);
+                                }
                             } else {
                                 // Retry
                                 sendRequestCounter++;
@@ -410,15 +426,20 @@ public class ImageSlideFragment extends Fragment {
 
         if (instagramPosts.size() <= 5) {
             // cache first 5 posts
-            Glide.with(context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMainWidth, imgMainHeight);
-            Glide.with(context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(imgMainWidth, imgMainHeight);
+            if (autoSize) {
+                GlideApp.with(context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMain.getWidth(), imgMain.getHeight());
+                GlideApp.with(context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(Constants.DEFAULT_PROFILE_PIC_WIDTH, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
+            } else {
+                GlideApp.with(context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMainWidth, imgMainHeight);
+                GlideApp.with(context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(profilePicWidth, profilePicHeight);
+            }
         }
 
         if (!maxNumberOfPostsReached) {
             txtProgress.setText(String.format(Locale.ENGLISH, "Retrieved %d/%d posts", instagramPosts.size(), numberOfPostsToDisplay));
             progressBar.setProgress(instagramPosts.size() + 1);
 
-            if (checkPostLimit(instagramPosts) || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
+            if (checkPostLimit(instagramPosts)) {
                 hideProgress();
                 webView.loadUrl("about:blank");
                 maxNumberOfPostsReached = true;
@@ -467,15 +488,20 @@ public class ImageSlideFragment extends Fragment {
 
 //                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
-                Glide.with(context).load(post.getImgUrl())
+                GlideApp.with(context).load(post.getImgUrl())
                         .centerCrop()
-                        .transition(DrawableTransitionOptions.withCrossFade())
+                        .transition(DrawableTransitionOptions.withCrossFade(1000))
                         .into(imgMain);
 
                 // cache new post
                 if (index + 5 < instagramPosts.size()) {
-                    Glide.with(context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMainWidth, imgMainHeight);
-                    Glide.with(context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(imgMainWidth, imgMainHeight);
+                    if (autoSize) {
+                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMain.getWidth(), imgMain.getHeight());
+                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(Constants.DEFAULT_PROFILE_PIC_WIDTH, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
+                    } else {
+                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMainWidth, imgMainHeight);
+                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(profilePicWidth, profilePicHeight);
+                    }
                 }
 
                 DecimalFormat numberFormatter = new DecimalFormat("#,###");
@@ -495,9 +521,9 @@ public class ImageSlideFragment extends Fragment {
 
                 if (!post.getUserProfilePicUrl().equals(lastUserProfilePicUrl)) {
                     lastUserProfilePicUrl = post.getUserProfilePicUrl();
-                    Glide.with(context).load(lastUserProfilePicUrl)
+                    GlideApp.with(context).load(lastUserProfilePicUrl)
                             .centerCrop()
-                            .transition(DrawableTransitionOptions.withCrossFade())
+                            .transition(DrawableTransitionOptions.withCrossFade(1000))
                             .into(imgProfile);
                 }
 
@@ -577,8 +603,10 @@ public class ImageSlideFragment extends Fragment {
         isCaptionDisplayed = sharedPreferences.getBoolean(isPostCaptionDisplayedPrefKey, true);
         isProfilePicDisplayed = sharedPreferences.getBoolean(isProfilePicDisplayedPrefKey, true);
         isUsernameDisplayed = sharedPreferences.getBoolean(isUsernameDisplayPrefKey, true);
+        isNetworkStrengthDisplayed = sharedPreferences.getBoolean(isNetworkStrengthDisplayedPrefKey, false);
 
         // Size configs
+        autoSize = sharedPreferences.getBoolean(autoSizePrefKey, true);
         profilePicWidth = getIntValueFromPref(profilePicWidthPrefKey, Constants.DEFAULT_PROFILE_PIC_WIDTH);
         profilePicHeight = getIntValueFromPref(profilePicHeightPrefKey, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
         usernameTextSize = getIntValueFromPref(usernameTextSizePrefKey, Constants.DEFAULT_USERNAME_TEXT_SIZE);
@@ -587,7 +615,7 @@ public class ImageSlideFragment extends Fragment {
         likeTextSize = getIntValueFromPref(likeTextSizePrefKey, Constants.DEFAULT_LIKE_TEXT_SIZE);
         commentTextSize = getIntValueFromPref(commentTextSizePrefKey, Constants.DEFAULT_COMMENT_TEXT_SIZE);
         captionTextSize = getIntValueFromPref(captionTextSizePrefKey, Constants.DEFAULT_CAPTION_TEXT_SIZE);
-        presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL);
+        presentInterval = getIntValueFromPref(presentIntervalPrefKey, Constants.DEFAULT_PRESENTATION_INTERVAL) * 1000;
         refreshInterval = getIntValueFromPref(refreshIntervalPrefKey, Constants.DEFAULT_REFRESH_INTERVAL) * 60 * 1000;
 
         String excludedHashtagsString = sharedPreferences.getString(excludedHashtagsPrefKey, "");
@@ -604,14 +632,23 @@ public class ImageSlideFragment extends Fragment {
     }
 
     private void initComponentsSize() {
-        imgProfile.getLayoutParams().width = profilePicWidth;
-        imgProfile.getLayoutParams().height = profilePicHeight;
-        txtUsername.setTextSize(usernameTextSize);
-        imgMain.getLayoutParams().height = imgMainHeight;
-        imgMain.getLayoutParams().width = imgMainWidth;
-        txtNumberOfLikes.setTextSize(likeTextSize);
-        txtNumberOfComments.setTextSize(commentTextSize);
-        txtPostCaption.setTextSize(captionTextSize);
+        if (autoSize) {
+            imgProfile.getLayoutParams().width = Constants.DEFAULT_PROFILE_PIC_WIDTH;
+            imgProfile.getLayoutParams().height = Constants.DEFAULT_PROFILE_PIC_HEIGHT;
+            txtUsername.setTextSize(Constants.DEFAULT_USERNAME_TEXT_SIZE);
+            txtNumberOfLikes.setTextSize(Constants.DEFAULT_LIKE_TEXT_SIZE);
+            txtNumberOfComments.setTextSize(Constants.DEFAULT_COMMENT_TEXT_SIZE);
+            txtPostCaption.setTextSize(Constants.DEFAULT_CAPTION_TEXT_SIZE);
+        } else {
+            imgProfile.getLayoutParams().width = profilePicWidth;
+            imgProfile.getLayoutParams().height = profilePicHeight;
+            txtUsername.setTextSize(usernameTextSize);
+            imgMain.getLayoutParams().height = imgMainHeight;
+            imgMain.getLayoutParams().width = imgMainWidth;
+            txtNumberOfLikes.setTextSize(likeTextSize);
+            txtNumberOfComments.setTextSize(commentTextSize);
+            txtPostCaption.setTextSize(captionTextSize);
+        }
     }
 
     private void startConfigServerMsgTimer(String messageFormat, int duration, TextView target, boolean hideServerInfo) {
@@ -672,24 +709,6 @@ public class ImageSlideFragment extends Fragment {
             }
         }
         return false;
-    }
-
-    /**
-     * This method checks the post index to avoid infinite scrolling
-     * After #SCROLL_COUNT_LIMIT times of scrolls, if no posts are added -> terminate the scrape process
-     */
-    private boolean checkInfiniteSroll(int postIndex) {
-        int lastPostIndex = 0;
-
-        if (!instagramPosts.isEmpty()) {
-            lastPostIndex = instagramPosts.get(instagramPosts.size() - 1).getIndex();
-        }
-
-        if (postIndex > (lastPostIndex + Constants.INFINITE_SCROLL_POST_COUNT)) {
-            return true;
-        } else {
-            return false;
-        }
     }
 
     /**
@@ -797,10 +816,6 @@ public class ImageSlideFragment extends Fragment {
             progressBar.setVisibility(View.VISIBLE);
         }
 
-        if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
-            return;
-        }
-
         for (String url : listUrl) {
             instagramUrlsSet.add(new InstagramPostElement(url));
         }
@@ -813,10 +828,6 @@ public class ImageSlideFragment extends Fragment {
             for (InstagramPostElement postElement : instagramUrlsSet) {
                 final int index = postIndex++;
 
-                if (checkInfiniteSroll(index)) {
-                    hideProgress();
-                    return;
-                }
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
                     String postHref = postElement.getHref();
@@ -847,6 +858,16 @@ public class ImageSlideFragment extends Fragment {
             }
         } else {
             scrollCount++;
+
+            if (scrollCount > Constants.SCROLL_COUNT_LIMIT) {
+                hideProgress();
+                webView.loadUrl("about:blank");
+                maxNumberOfPostsReached = true;
+                Bugfender.d(bugfenderTag, "Finished fetching posts");
+                instagramUrlsSet.clear();
+                instagramPostsSet.clear();
+                logMemory();
+            }
         }
 
         lastNumberOfPosts = instagramUrlsSet.size();
@@ -891,10 +912,6 @@ public class ImageSlideFragment extends Fragment {
             for (InstagramPostElement postElement : instagramUrlsSet) {
                 final int index = postIndex++;
 
-                if (checkInfiniteSroll(index)) {
-                    hideProgress();
-                    return;
-                }
                 // If the element is requested for info once -> won't be processed
                 if (!postElement.isRequested()) {
                     String postHref = postElement.getHref();

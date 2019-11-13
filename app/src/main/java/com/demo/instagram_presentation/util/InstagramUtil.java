@@ -1,5 +1,7 @@
 package com.demo.instagram_presentation.util;
 
+import android.util.Log;
+
 import com.demo.instagram_presentation.model.InstagramPost;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;

@@ -1,19 +1,10 @@
 package com.demo.instagram_presentation.data.scraper;
 
-import android.os.AsyncTask;
 import android.os.Handler;
-import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import com.android.volley.toolbox.StringRequest;
-import com.demo.instagram_presentation.model.InstagramPost;
-import com.demo.instagram_presentation.model.InstagramPostElement;
-import com.demo.instagram_presentation.util.InstagramUtil;
-
 import org.apache.commons.text.StringEscapeUtils;
-
-import java.util.ArrayList;
 
 public class InstagramPostsGetter {
     private WebView webView;
