@@ -427,11 +427,11 @@ public class ImageSlideFragment extends Fragment {
         if (instagramPosts.size() <= 5) {
             // cache first 5 posts
             if (autoSize) {
-                GlideApp.with(context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMain.getWidth(), imgMain.getHeight());
-                GlideApp.with(context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(Constants.DEFAULT_PROFILE_PIC_WIDTH, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
+                GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMain.getWidth(), imgMain.getHeight());
+                GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(Constants.DEFAULT_PROFILE_PIC_WIDTH, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
             } else {
-                GlideApp.with(context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMainWidth, imgMainHeight);
-                GlideApp.with(context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(profilePicWidth, profilePicHeight);
+                GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPost.getImgUrl()).submit(imgMainWidth, imgMainHeight);
+                GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPost.getUserProfilePicUrl()).submit(profilePicWidth, profilePicHeight);
             }
         }
 
@@ -488,7 +488,7 @@ public class ImageSlideFragment extends Fragment {
 
 //                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
-                GlideApp.with(context).load(post.getImgUrl())
+                GlideApp.with(InstagramApplicationContext.context).load(post.getImgUrl())
                         .centerCrop()
                         .transition(DrawableTransitionOptions.withCrossFade(1000))
                         .into(imgMain);
@@ -496,11 +496,11 @@ public class ImageSlideFragment extends Fragment {
                 // cache new post
                 if (index + 5 < instagramPosts.size()) {
                     if (autoSize) {
-                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMain.getWidth(), imgMain.getHeight());
-                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(Constants.DEFAULT_PROFILE_PIC_WIDTH, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
+                        GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMain.getWidth(), imgMain.getHeight());
+                        GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(Constants.DEFAULT_PROFILE_PIC_WIDTH, Constants.DEFAULT_PROFILE_PIC_HEIGHT);
                     } else {
-                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMainWidth, imgMainHeight);
-                        GlideApp.with(context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(profilePicWidth, profilePicHeight);
+                        GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPosts.get(index + 5).getImgUrl()).submit(imgMainWidth, imgMainHeight);
+                        GlideApp.with(InstagramApplicationContext.context).downloadOnly().load(instagramPosts.get(index + 5).getUserProfilePicUrl()).submit(profilePicWidth, profilePicHeight);
                     }
                 }
 
@@ -521,7 +521,7 @@ public class ImageSlideFragment extends Fragment {
 
                 if (!post.getUserProfilePicUrl().equals(lastUserProfilePicUrl)) {
                     lastUserProfilePicUrl = post.getUserProfilePicUrl();
-                    GlideApp.with(context).load(lastUserProfilePicUrl)
+                    GlideApp.with(InstagramApplicationContext.context).load(lastUserProfilePicUrl)
                             .centerCrop()
                             .transition(DrawableTransitionOptions.withCrossFade(1000))
                             .into(imgProfile);
