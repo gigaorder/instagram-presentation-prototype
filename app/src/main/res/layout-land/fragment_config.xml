@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:src="@drawable/fallback_screen_bg_16_9"
+        android:src="@drawable/socialvybe"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -25,32 +25,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintGuide_percent="0.15"
         app:layout_constraintStart_toStartOf="parent" />
-
-    <androidx.appcompat.widget.LinearLayoutCompat
-        android:id="@+id/logoLayout"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:orientation="vertical"
-        android:weightSum="2"
-        app:layout_constraintBottom_toTopOf="@id/fragment_config_middle_guideline"
-        app:layout_constraintTop_toBottomOf="@id/fragment_config_top_guideline">
-
-        <ImageView
-            android:id="@+id/fragment_config_imgLogo"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginBottom="20dp"
-            android:layout_weight="1"
-            android:src="@drawable/rockiton" />
-
-        <ImageView
-            android:id="@+id/fragment_config_imgLogoText"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:src="@drawable/feed2wall_logo_white" />
-
-    </androidx.appcompat.widget.LinearLayoutCompat>
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/fragment_config_middle_guideline"
@@ -79,6 +53,7 @@
         android:gravity="center"
         android:textColor="#ffffff"
         android:textSize="@dimen/_12ssp"
+        android:layout_marginTop="10dp"
         app:layout_constraintEnd_toEndOf="@id/fragment_config_txtServerInfo"
         app:layout_constraintStart_toStartOf="@id/fragment_config_txtServerInfo"
         app:layout_constraintTop_toBottomOf="@id/fragment_config_txtServerInfo" />
@@ -93,7 +68,7 @@
         app:layout_constraintEnd_toEndOf="@id/fragment_config_txtTimer"
         app:layout_constraintStart_toStartOf="@id/fragment_config_txtTimer"
         app:layout_constraintTop_toBottomOf="@id/fragment_config_txtTimer"
-        app:layout_constraintBottom_toTopOf="@id/fragment_config_txtAppInfo" />
+        app:layout_constraintBottom_toTopOf="@id/fragment_config_txtAppInfo"/>
 
 
     <TextView
@@ -103,7 +78,7 @@
         android:layout_marginBottom="8dp"
         android:gravity="center"
         android:textColor="#ffffff"
-        android:textSize="@dimen/_15ssp"
+        android:textSize="@dimen/_10ssp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

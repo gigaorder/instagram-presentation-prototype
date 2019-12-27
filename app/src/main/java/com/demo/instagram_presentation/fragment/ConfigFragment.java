@@ -51,10 +51,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     TextView txtTimer;
     @BindView(R.id.fragment_config_imgBackground)
     ImageView imgBackground;
-    @BindView(R.id.fragment_config_imgLogoText)
-    ImageView imgLogoText;
-    @BindView(R.id.fragment_config_imgLogo)
-    ImageView imgLogo;
     @BindView(R.id.fragment_config_txtError)
     TextView txtError;
     @BindView(R.id.fragment_config_txtAppInfo)
