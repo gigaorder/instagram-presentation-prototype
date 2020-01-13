@@ -91,6 +91,9 @@ if (buildWithTinker()) {
          */
         ignoreWarning = false
 
+        allowLoaderInAnyDex = true
+        removeLoaderForAllDex = true
+
         /**
          * optional，default 'true'
          * whether sign the patch file

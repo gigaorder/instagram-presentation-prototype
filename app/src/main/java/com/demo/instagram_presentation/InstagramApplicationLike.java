@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.provider.Settings;
+import android.support.multidex.MultiDex;
 
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.hotfix_plugin.TinkerManager;
@@ -54,6 +55,8 @@ public class InstagramApplicationLike extends DefaultApplicationLike {
     @Override
     public void onBaseContextAttached(Context base) {
         super.onBaseContextAttached(base);
+        MultiDex.install(base);
+
         InstagramApplicationContext.application = getApplication();
         InstagramApplicationContext.context = getApplication();
         InstagramApplicationContext.DEVICE_ID = Settings.Secure.getString(getApplication().getContentResolver(), Settings.Secure.ANDROID_ID);
