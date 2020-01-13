@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "415098646879",
+    "firebase_url": "https://instagramupdate-253a7.firebaseio.com",
+    "project_id": "instagramupdate-253a7",
+    "storage_bucket": "instagramupdate-253a7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:415098646879:android:b247b23469c457bdc906ea",
+        "android_client_info": {
+          "package_name": "com.demo.instagram_presentation"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "415098646879-84oi7i6jmtpglbc6fbeqiqupccrjifme.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_klWrkAxqs_JTJFrVSrduUJcgrIMuefc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "415098646879-84oi7i6jmtpglbc6fbeqiqupccrjifme.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

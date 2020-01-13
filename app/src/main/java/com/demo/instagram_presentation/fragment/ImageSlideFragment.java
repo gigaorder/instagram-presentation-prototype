@@ -26,8 +26,12 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bugfender.sdk.Bugfender;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 import com.demo.instagram_presentation.GlideApp;
 import com.demo.instagram_presentation.BuildConfig;
 import com.demo.instagram_presentation.InstagramApplicationContext;
@@ -81,6 +85,8 @@ public class ImageSlideFragment extends Fragment {
     TextView txtProgress;
     @BindView(R.id.fragment_present_imgWatermark)
     ImageView imgWatermark;
+    @BindView(R.id.fragment_present_layout_info)
+    ViewGroup layoutInfo;
     @BindView(R.id.fragment_present_txtServerInfo)
     TextView txtServerInfo;
     @BindView(R.id.fragment_present_txtTimer)
@@ -443,7 +449,7 @@ public class ImageSlideFragment extends Fragment {
                 hideProgress();
                 webView.loadUrl("about:blank");
                 maxNumberOfPostsReached = true;
-                Bugfender.d(bugfenderTag, "Finished fetching posts");
+                Bugfender.d(bugfenderTag, "Finished fetching posts 1");
                 instagramUrlsSet.clear();
                 instagramPostsSet.clear();
                 logMemory();
@@ -488,10 +494,7 @@ public class ImageSlideFragment extends Fragment {
 
 //                Log.d("LogDisplayingPost", String.format("(%s) Post number %d, title: %s", new SimpleDateFormat("dd/MM - HH:mm:ss").format(new Date()), index, post.getImgUrl()));
 
-                GlideApp.with(InstagramApplicationContext.context).load(post.getImgUrl())
-                        .centerCrop()
-                        .transition(DrawableTransitionOptions.withCrossFade(1000))
-                        .into(imgMain);
+                loadImageToMain(post.getImgUrl());
 
                 // cache new post
                 if (index + 5 < instagramPosts.size()) {
@@ -528,12 +531,32 @@ public class ImageSlideFragment extends Fragment {
                 }
 
                 showComponents();
-
-                handler.postDelayed(this, presentInterval);
             }
         };
 
         handler.post(imagePresentationLoader);
+    }
+
+    private void loadImageToMain(String imgUrl) {
+        GlideApp.with(InstagramApplicationContext.context).load(imgUrl)
+                .centerCrop()
+                .transition(DrawableTransitionOptions.withCrossFade(1000))
+                .listener(new RequestListener() {
+
+                    @Override
+                    public boolean onLoadFailed(@Nullable GlideException e, Object model, Target target, boolean isFirstResource) {
+                        Log.d("load", "load image failed");
+                        handler.post(() -> loadImageToMain(imgUrl));
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(Object resource, Object model, Target target, DataSource dataSource, boolean isFirstResource) {
+                        handler.postDelayed(imagePresentationLoader, presentInterval);
+                        return false;
+                    }
+                })
+                .into(imgMain);
     }
 
     private void hideProgress() {
@@ -584,7 +607,7 @@ public class ImageSlideFragment extends Fragment {
     }
 
     private void showWatermark() {
-        if (!LicenseUtil.validateKeyFiles()) {
+        if (!LicenseUtil.validateKeyFiles() && layoutInfo.getVisibility() != View.VISIBLE) {
             imgWatermark.setVisibility(View.VISIBLE);
         } else {
             imgWatermark.setVisibility(View.GONE);
@@ -661,10 +684,11 @@ public class ImageSlideFragment extends Fragment {
 
             @Override
             public void onFinish() {
-                if (hideServerInfo) {
-                    txtServerInfo.setVisibility(View.GONE);
-                }
-                target.setVisibility(View.GONE);
+//                if (hideServerInfo) {
+//                    txtServerInfo.setVisibility(View.GONE);
+//                }
+//                target.setVisibility(View.GONE);
+                layoutInfo.setVisibility(View.GONE);
             }
         }.start();
     }
@@ -681,11 +705,9 @@ public class ImageSlideFragment extends Fragment {
                 (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                 (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
 
-        String serverStatus = "Status: Online | ";
-        String wifiSsid = String.format(Locale.ENGLISH, "Connected WiFi SSID: %s%n", ssid);
-        String configServerIp;
-        configServerIp = String.format(Locale.ENGLISH, "Config server: %s:%d/%s", formatedIpAddress, Constants.WEB_SERVER_PORT, route);
-        String serverInfo = serverStatus + wifiSsid + configServerIp;
+        String wifiSsid = String.format(Locale.ENGLISH, "Wifi: %s", ssid);
+        String configServerIp = String.format(Locale.ENGLISH, "Setup Site: %s:%d/%s", formatedIpAddress, Constants.WEB_SERVER_PORT, route);
+        String serverInfo = wifiSsid + "  |  " + configServerIp;
         txtServerInfo.setText(serverInfo);
     }
 
@@ -816,6 +838,10 @@ public class ImageSlideFragment extends Fragment {
             progressBar.setVisibility(View.VISIBLE);
         }
 
+        if (maxNumberOfPostsReached) {
+            return;
+        }
+
         for (String url : listUrl) {
             instagramUrlsSet.add(new InstagramPostElement(url));
         }
@@ -863,7 +889,7 @@ public class ImageSlideFragment extends Fragment {
                 hideProgress();
                 webView.loadUrl("about:blank");
                 maxNumberOfPostsReached = true;
-                Bugfender.d(bugfenderTag, "Finished fetching posts");
+                Bugfender.d(bugfenderTag, "Finished fetching posts 2");
                 instagramUrlsSet.clear();
                 instagramPostsSet.clear();
                 logMemory();
@@ -885,7 +911,7 @@ public class ImageSlideFragment extends Fragment {
         prefEditor.putBoolean(requiredLoginPrefKey, false);
         prefEditor.apply();
         if (maxNumberOfPostsReached || scrollCount >= Constants.SCROLL_COUNT_LIMIT) {
-            Bugfender.d(bugfenderTag, "Finished fetching posts");
+            Bugfender.d(bugfenderTag, "Finished fetching posts 3");
             instagramUrlsSet.clear();
             instagramPostsSet.clear();
             logMemory();

@@ -47,14 +47,10 @@ import static android.content.Context.WIFI_SERVICE;
 public class ConfigFragment extends Fragment implements WifiConnectListener {
     @BindView(R.id.fragment_config_txtServerInfo)
     TextView txtServerInfo;
-    @BindView(R.id.fragment_config_txtTimer)
-    TextView txtTimer;
     @BindView(R.id.fragment_config_imgBackground)
     ImageView imgBackground;
     @BindView(R.id.fragment_config_txtError)
     TextView txtError;
-    @BindView(R.id.fragment_config_txtAppInfo)
-    TextView txtAppInfo;
 
     @BindString(R.string.config_server_cant_start)
     String configServerCantStartMsg;
@@ -94,8 +90,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
     private String instagramSourceTags;
     private boolean isRequiredLogin;
 
-    private CountDownTimer configServerTimer;
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -103,8 +97,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         View fragmentRootView = inflater.inflate(R.layout.fragment_config, container, false);
         ButterKnife.bind(this, fragmentRootView);
         thisFragment = this;
-
-        // Load background images
 
         sharedPreferences = AppPreferencesUtil.getSharedPreferences();
         wifiManager = (WifiManager) InstagramApplicationContext.context.getSystemService(WIFI_SERVICE);
@@ -114,9 +106,7 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
 
         AppPreferencesUtil.setDefaultImageSize(getActivity());
 
-        txtTimer.setVisibility(View.GONE);
         txtServerInfo.setVisibility(View.VISIBLE);
-        txtAppInfo.setText(String.format(Locale.ENGLISH, appInfoMsg, BuildConfig.VERSION_NAME, InstagramApplicationContext.DEVICE_ID));
 
         Handler handler = new Handler();
         new CountDownTimer(Constants.NETWORK_STATUS_CHECK_DELAY, 1000) {
@@ -163,7 +153,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                         }
                     } else {
                         setErrorMsg();
-                        txtTimer.setVisibility(View.GONE);
                     }
                 }
             }
@@ -188,11 +177,6 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
         }
     }
 
-    private void hideServerInfoText() {
-        txtServerInfo.setVisibility(View.GONE);
-        txtTimer.setVisibility(View.GONE);
-    }
-
     private void setServerInfoOnWifi(String route) {
         WifiInfo info = wifiManager.getConnectionInfo();
         int ipAddress = info.getIpAddress();
@@ -201,40 +185,15 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
                 (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                 (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
 
-        String serverStatus = "Status: Online | ";
-        String wifiSsid = String.format("Connected WiFi SSID: %s\n", ssid);
-        String configServerIp = String.format("Config server: %s:%d/%s", formatedIpAddress, Constants.WEB_SERVER_PORT, route);
-        int prevLength = serverStatus.length() + wifiSsid.length();
+        String wifiSsid = String.format("WIFI: %s", ssid);
+        String configServerIp = String.format("Setup Site: %s:%d/%s", formatedIpAddress, Constants.WEB_SERVER_PORT, route);
 
-        Spannable serverInfo = new SpannableString(serverStatus + wifiSsid + configServerIp);
+        Spannable serverInfo = new SpannableString(wifiSsid + "  |  " + configServerIp);
 
-        serverInfo.setSpan(new ForegroundColorSpan(Color.GREEN), 8, 14, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE); // "online" is green
-        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), serverStatus.length() + 21, serverStatus.length() + 21 + ssid.length() + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // SSID is bold
-        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLength + 15, prevLength + 15 + formatedIpAddress.length() + 1 + String.valueOf(Constants.WEB_SERVER_PORT).length() + 1 + route.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
+        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), 0, 5, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        serverInfo.setSpan(new StyleSpan(Typeface.BOLD), 6 + ssid.length(), 6 + ssid.length() + 17, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
         txtServerInfo.setText(serverInfo);
-
-        startConfigServerMsgTimer(true);
-    }
-
-    private void startConfigServerMsgTimer(boolean isOnWifi) {
-        int length = isOnWifi ? Constants.HIDE_SERVER_INFO_ON_WIFI_DELAY : Constants.HIDE_SERVER_INFO_ON_WIFI_DIRECT_DELAY;
-
-        if (configServerTimer == null) {
-            configServerTimer = new CountDownTimer(length, 1000) {
-                @Override
-                public void onTick(long l) {
-                    txtTimer.setText(String.format("This message will disappear in %d seconds", l / 1000));
-                }
-
-                @Override
-                public void onFinish() {
-                    hideServerInfoText();
-                }
-            }.start();
-
-            txtTimer.setVisibility(View.VISIBLE);
-        }
     }
 
     private WifiP2pManager.ActionListener onWifiDirectStartedListener = new WifiP2pManager.ActionListener() {
@@ -265,24 +224,17 @@ public class ConfigFragment extends Fragment implements WifiConnectListener {
             String p2pNetworkName = groupInfo.getNetworkName();
             String passphrase = groupInfo.getPassphrase();
 
-            String serverStatus = "Status: Online\n";
-            String wifiDirectSsid = String.format("WiFi Direct SSID: \"%s\" | ", p2pNetworkName);
+            String wifiDirectSsid = String.format("WIFI: \"%s\" | ", p2pNetworkName);
             String password = String.format("Password: \"%s\"\n", passphrase);
-            String configServerIp = String.format("Config server: 192.168.49.1:%d/wifi", Constants.WEB_SERVER_PORT);
+            String configServerIp = String.format("Setup Site: 192.168.49.1:%d/wifi", Constants.WEB_SERVER_PORT);
 
-            int prevLength1 = serverStatus.length() + wifiDirectSsid.length();
-            int prevLengthTotal = prevLength1 + password.length();
-
-            Spannable serverInfo = new SpannableString(serverStatus + wifiDirectSsid + password + configServerIp);
-
-            serverInfo.setSpan(new ForegroundColorSpan(Color.GREEN), 8, 14, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE); // "online" is green
-            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), serverStatus.length() + 18, serverStatus.length() + 18 + p2pNetworkName.length() + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // SSID is bold
-            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLength1 + 10, prevLength1 + 10 + passphrase.length() + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // Password is bold
-            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), prevLengthTotal + 15, prevLengthTotal + 15 + 12 + 1 + String.valueOf(Constants.WEB_SERVER_PORT).length() + 5, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
+            Spannable serverInfo = new SpannableString(wifiDirectSsid + password + configServerIp);
+//
+            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), 0, 5, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // SSID is bold
+            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), 6 + p2pNetworkName.length() + 5, 6 + p2pNetworkName.length() + 5 + 9, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); // Password is bold
+            serverInfo.setSpan(new StyleSpan(Typeface.BOLD), 6 + p2pNetworkName.length() + 5 + 11 + passphrase.length() + 2, 6 + p2pNetworkName.length() + 5 + 11 + passphrase.length() + 2 + 11, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); //IP is bold
 
             txtServerInfo.setText(serverInfo);
-
-            startConfigServerMsgTimer(false);
         } else {
             txtServerInfo.setText(wifiDirectNoInfoMsg);
         }

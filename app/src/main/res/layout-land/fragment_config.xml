@@ -36,51 +36,27 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
-        android:id="@+id/fragment_config_txtServerInfo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="#ffffff"
-        android:textSize="@dimen/_15ssp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/fragment_config_middle_guideline" />
-
-    <TextView
-        android:id="@+id/fragment_config_txtTimer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="#ffffff"
-        android:textSize="@dimen/_12ssp"
-        android:layout_marginTop="10dp"
-        app:layout_constraintEnd_toEndOf="@id/fragment_config_txtServerInfo"
-        app:layout_constraintStart_toStartOf="@id/fragment_config_txtServerInfo"
-        app:layout_constraintTop_toBottomOf="@id/fragment_config_txtServerInfo" />
-
-    <TextView
         android:id="@+id/fragment_config_txtError"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:textColor="#ffffff"
-        android:textSize="@dimen/_15ssp"
-        app:layout_constraintEnd_toEndOf="@id/fragment_config_txtTimer"
-        app:layout_constraintStart_toStartOf="@id/fragment_config_txtTimer"
-        app:layout_constraintTop_toBottomOf="@id/fragment_config_txtTimer"
-        app:layout_constraintBottom_toTopOf="@id/fragment_config_txtAppInfo"/>
-
+        android:textSize="35sp"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/fragment_config_txtServerInfo"/>
 
     <TextView
-        android:id="@+id/fragment_config_txtAppInfo"
+        android:id="@+id/fragment_config_txtServerInfo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
         android:gravity="center"
         android:textColor="#ffffff"
-        android:textSize="@dimen/_10ssp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:textSize="35sp"
+        android:layout_marginBottom="64dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

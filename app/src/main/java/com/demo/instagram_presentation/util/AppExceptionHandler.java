@@ -11,7 +11,6 @@ import androidx.annotation.NonNull;
 
 import com.bugfender.sdk.Bugfender;
 import com.demo.instagram_presentation.InstagramApplicationContext;
-import com.demo.instagram_presentation.InstagramApplicationLike;
 import com.demo.instagram_presentation.activity.MainActivity;
 
 import org.slf4j.Logger;

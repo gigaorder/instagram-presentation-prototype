@@ -155,14 +155,17 @@
         android:textAlignment="center"
         android:background="#FFF"
         android:padding="10dp"
-        android:textSize="@dimen/_14ssp"
+        android:textSize="25sp"
         android:textColor="@color/colorAccent"
         android:visibility="gone"/>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/fragment_present_layout_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
+        android:background="#B3000000"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <TextView
@@ -171,11 +174,9 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:gravity="center"
-            android:textColor="@color/colorAccent"
-            android:textSize="@dimen/_12ssp"
-            android:text="This message will disappear in 100 senconds"
+            android:textColor="@android:color/white"
+            android:textSize="35sp"
             android:textAlignment="center"
-            android:background="#ffffff"
             app:layout_constraintBottom_toBottomOf="parent" />
 
         <TextView
@@ -183,11 +184,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:textColor="@color/colorPrimary"
-            android:textSize="@dimen/_12ssp"
-            android:text="This message will disappear in 100 senconds"
+            android:textColor="@android:color/white"
+            android:textSize="35sp"
             android:textAlignment="center"
-            android:background="#ffffff"
             android:layout_marginBottom="16dp"
             app:layout_constraintBottom_toTopOf="@id/fragment_present_txtTimer" />
 
@@ -195,11 +194,12 @@
 
     <ImageView
         android:id="@+id/fragment_present_imgWatermark"
-        android:layout_width="@dimen/_500sdp"
+        android:layout_width="@dimen/_200sdp"
         android:layout_height="wrap_content"
-        android:src="@drawable/socialvybe_nobg"
+        android:src="@drawable/watermark_socialvybe_gilroy"
         android:adjustViewBounds="true"
-        app:layout_constraintStart_toStartOf="parent"
+        android:alpha="0.5"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 

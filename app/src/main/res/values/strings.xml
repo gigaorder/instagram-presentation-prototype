@@ -3,9 +3,9 @@
 
     <!--Messages-->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="source_url_not_set">Instagram source URL is not set\nPlease go to config web server to set it first</string>
-    <string name="invalid_source_url">Invalid Instagram source URL, please specify a valid URL\nApp will restart when source URL is changed on config website</string>
-    <string name="feed_request_error">Error occurred while trying to get user\'s feed data from Instagram\nMake sure the URL is valid</string>
+    <string name="source_url_not_set">Open Setup Site to setup content.</string>
+    <string name="invalid_source_url">Invalid instagram source.</string>
+    <string name="feed_request_error">Cannot get user\'s feed data from Instagram\nMake sure the URL is valid</string>
     <string name="exit">Exit</string>
     <string name="go_back_to_main_screen">Go back to main screen</string>
     <string name="wifi_direct_no_info">Can\'t get Wi-Fi Direct info</string>

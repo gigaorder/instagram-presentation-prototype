@@ -1,6 +1,7 @@
 package com.demo.instagram_presentation.data.scraper;
 
 import android.os.Handler;
+import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
