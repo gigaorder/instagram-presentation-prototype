@@ -1,11 +1,11 @@
 dependencies {
-    api("com.tencent.tinker:tinker-android-lib:1.9.14.3")
+    api("com.tencent.tinker:tinker-android-lib:1.9.14")
 
     // Maven local cannot handle transist dependencies.
-    implementation("com.tencent.tinker:tinker-android-loader:1.9.14.3")
+    implementation("com.tencent.tinker:tinker-android-loader:1.9.14")
 
-    annotationProcessor("com.tencent.tinker:tinker-android-anno:1.9.14.3")
-    compileOnly("com.tencent.tinker:tinker-android-anno:1.9.14.3")
+    annotationProcessor("com.tencent.tinker:tinker-android-anno:1.9.14")
+    compileOnly("com.tencent.tinker:tinker-android-anno:1.9.14")
 }
 
 def gitSha() {
