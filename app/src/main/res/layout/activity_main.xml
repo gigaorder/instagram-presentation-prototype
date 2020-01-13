@@ -19,7 +19,7 @@
         android:id="@+id/main_activity_app_message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="@dimen/_14ssp"
+        android:textSize="42sp"
         android:textColor="@color/colorPrimary"
         android:background="#fff"
         android:gravity="center"
